@@ -37,7 +37,6 @@ var code = new CodeImportGroup(Data);
 foreach (var (eventName, filename) in new[] {
     ("Create_0", "Create.gml"),
     ("Step_0", "Step.gml"),
-    ("Other_63", "Dialog.gml"),
     ("Draw_64", "DrawGui.gml"),
     ("CleanUp_0", "Cleanup.gml")
 }) {

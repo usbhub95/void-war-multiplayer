@@ -1,5 +1,15 @@
 panel_open = false;
-dialog_id = -1;
+entry_open = false;
+entry_text = "";
+entry_error = "";
+entry_left = 28;
+entry_top = 82;
+entry_width = 284;
+entry_height = 24;
+entry_button_top = 114;
+entry_button_width = 126;
+entry_button_height = 26;
+entry_cancel_left = entry_left + entry_button_width + 8;
 peer_text = "";
 peer_id = int64(0);
 probe_status = "Idle";
@@ -19,6 +29,33 @@ pending_sequence = -1;
 ping_sent_at = 0;
 next_ping_at = 0;
 deadline = 0;
+
+enter_peer_id = function(_text) {
+    if (string_length(_text) != 17 || string_digits(_text) != _text) {
+        entry_error = "Enter the peer's 17-digit Steam ID.";
+        return;
+    }
+
+    // Build the ID as an int64 so distinct accounts survive conversion without rounding.
+    var _target = int64(0);
+    for (var _index = 1; _index <= 17; _index += 1) {
+        var _digit = ord(string_char_at(_text, _index)) - ord("0");
+        _target = _target * int64(10) + int64(_digit);
+    }
+    if ((_target >> 32) != 0x01100001 || _target == steam_get_user_steam_id()) {
+        entry_error = "Enter another player's individual Steam ID.";
+        return;
+    }
+
+    peer_text = _text;
+    peer_id = _target;
+    round_trip_ms = -1;
+    reply_count = 0;
+    next_ping_at = current_time;
+    deadline = current_time + 30000;
+    probe_status = "Waiting for peer...";
+    entry_open = false;
+};
 
 stop_probe = function(_reason) {
     if (peer_id != 0 && steam_initialised()) {
