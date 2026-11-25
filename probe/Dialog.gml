@@ -1,8 +1,9 @@
-if (dialog_id == -1 || async_load[? "id"] != dialog_id) exit;
+// Use explicit map lookups because the patch compiler emits array indexing for the accessor.
+if (dialog_id == -1 || ds_map_find_value(async_load, "id") != dialog_id) exit;
 dialog_id = -1;
-if (!async_load[? "status"]) exit;
+if (!ds_map_find_value(async_load, "status")) exit;
 
-var _text = string_trim(async_load[? "result"]);
+var _text = string_trim(ds_map_find_value(async_load, "result"));
 if (string_length(_text) != 17 || string_digits(_text) != _text) {
     probe_status = "Enter the peer's 17-digit Steam ID.";
     exit;
