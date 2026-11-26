@@ -39,6 +39,14 @@ The runtime fixtures were temporary. For future changes, build from the pinned v
 
 ## Resume here
 
-The [protocol 5 guest ship playtest](README.md#guest-ship-playtest) worked overall, with guest animation jitter reported. Animation tuning is deferred. If revisited, check whether resetting the local animation phase from each host snapshot contributes to the jitter. The cause has not been verified.
+The [protocol 5 guest ship playtest](README.md#guest-ship-playtest) worked overall, with guest animation jitter reported. Each accepted crew update resets the guest to the host's animation frame and restarts the local animation clock. A timing example at 12 animation frames per second showed that uneven arrivals can rewind or skip frames. The cause of the live jitter remains unverified. Animation tuning is deferred.
+
+### Proposed native input experiment
+
+Inspection of the pinned build found that the native right-click branch in `oCell` Step uses the selection in `oUICursor.currSelected` and checks live hull, room, and crew state. It chooses ordinary room movement, a vacant precision tile, or the occupied-tile fallback. An ordinary click in the same room can also target a system console. The same Step event handles oxygen and hazards, so reusing the whole event in the guest's empty room would also bring in simulation dependencies.
+
+In a temporary local build, observe the native crew-order branch in a normal starter encounter. Record the selected crew member, destination room, requested tile when applicable, and movement branch. Try ordinary room movement, vacant and occupied precision tiles, and a same-room console click. The experiment passes if it captures one intent per accepted click, ignores blocked clicks and simulation-driven movement, and preserves native movement. Use the result to choose where a future guest view can turn native orders into the existing host commands.
+
+## Long-term direction
 
 The long-term target is a guest experience with native presentation and controls. The current custom view and numbered panel are test interfaces. The networking goal is to send the combat state the guest needs without periodic full-game snapshots. One candidate is host-authoritative combat with guest-side crew prediction corrected by host state. The current guest renders a limited snapshot view and runs no local combat simulation. Whole-game rollback feasibility is unverified. A seed alone cannot reconcile different RNG call orders. Whole-game rollback would require deterministic frame replay and reliable state capture and restore. [GameMaker RNG reference](https://manual.gamemaker.io/lts/en/GameMaker_Language/GML_Reference/Maths_And_Numbers/Number_Functions/random_set_seed.htm) · [GGPO developer guide](https://github.com/pond3r/ggpo/blob/master/doc/DeveloperGuide.md)
