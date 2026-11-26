@@ -41,13 +41,13 @@ Record the result on both PCs and the status shown if either fails. The original
 4. Redirect the same crew member with the host's normal controls, then send another guest order. If both issue an order, the last valid order processed on the host should determine the destination. Check both panels agree where the crew member arrives.
 5. Press **F10** on the guest. Verify the host can still move the crew normally after the session ends.
 
-The guest uses the panel for this milestone. The numbered map shows up to 24 rooms from the host's ship. The host validates reachability at the time of the order. This build uses probe protocol 4, so both PCs need the same revision. The numbered map is still available for the keyboard playtest above.
+The guest uses the panel for this milestone. The numbered map shows up to 24 rooms from the host's ship. The host validates reachability at the time of the order. This build uses probe protocol 5, so both PCs need the same revision. The numbered map is still available for the keyboard playtest above.
 
 ## Guest ship playtest
 
 1. Use the shared crew steps to connect both PCs and share one crew member in an encounter on a starter ship.
-2. On the guest, press **F5**. The guest ship view should show the host ship’s room layout and the shared crew marker. The guest’s view follows the host’s reported positions.
-3. Right-click a tile before selecting the crew marker. This should send no order. Left-click the marker, then right-click a tile in a multi-tile room. Check that the host moves the crew member to that exact vacant tile and the guest shows the same tile and **Arrived**. Right-click a second vacant tile in the same room and check that the crew moves again.
+2. On the guest, press **F5**. The guest ship view should show the host ship's room layout and the shared crew's in-game sprite. On the host, send the crew in opposite directions and then let it stop. The guest should see walking, turns, and the idle sprite, with smooth position changes between updates. Click the crew where it is drawn while moving to verify selection. Pause the host and check that the guest animation stops after the next update.
+3. Left-click empty space to clear the crew selection, then right-click a tile. This should send no order. Left-click the crew, then right-click a tile in a multi-tile room. Check that the host moves the crew member to that exact vacant tile and the guest shows the same tile and **Arrived**. Right-click a second vacant tile in the same room and check that the crew moves again.
 4. Right-click an occupied tile and compare the result with a native precision-mode click on the host. The guest should highlight the tile the host actually chose. Redirect the crew with the host's normal controls, then issue another guest order. Confirm that the last valid order processed on the host determines the destination.
 5. Press **F5** on the guest to return to the numbered panel and check that the connection survives. Reopen the ship view and press **F10** there. The guest should return to the title screen and the host should retain normal movement controls.
 

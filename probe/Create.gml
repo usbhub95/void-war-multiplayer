@@ -18,7 +18,7 @@ reply_count = 0;
 
 probe_magic = 0x31505756;
 game_build = 26906873;
-probe_version = 4;
+probe_version = 5;
 packet_length = 15;
 ping_packet = 1;
 pong_packet = 2;
@@ -102,7 +102,9 @@ read_probe = function() {
     var _kind = buffer_read(inbound, buffer_u8);
     var _sequence = buffer_read(inbound, buffer_u32);
     if (reply_count > 0 && _kind == crew_state_kind) {
-        if (_size == crew_state_size) read_crew_state(_sequence);
+        if (_size >= crew_state_base_size && _size <= crew_state_base_size + 64) {
+            read_crew_state(_sequence, _size);
+        }
         return;
     }
     if (reply_count > 0 && _kind == crew_order_kind) {

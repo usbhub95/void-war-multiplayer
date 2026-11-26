@@ -3,7 +3,7 @@ crew_state_kind = 3;
 crew_order_kind = 4;
 crew_layout_kind = 5;
 crew_layout_ack_kind = 6;
-crew_state_size = packet_length + 16;
+crew_state_base_size = packet_length + 27;
 crew_order_size = packet_length + 6;
 crew_max_rooms = 24;
 crew_epoch = current_time;
@@ -215,6 +215,44 @@ read_crew_layout = function(_epoch, _size) {
     send_probe(crew_layout_ack_kind, _epoch);
 };
 
+write_crew_pose = function() {
+    var _x = 0;
+    var _y = 0;
+    var _sprite = -1;
+    var _frame = 0;
+    var _fps = 0;
+    var _facing = 1;
+    var _tint = c_white;
+
+    if (crew_token != 0) {
+        var _crew = shared_crew;
+        _x = variable_instance_exists(_crew, "spriteX") ? _crew.spriteX : _crew.x;
+        _y = variable_instance_exists(_crew, "spriteY") ? _crew.spriteY : _crew.y;
+        _x -= shared_origin_x;
+        _y -= shared_origin_y;
+        if (sprite_exists(_crew.sprite_index)) {
+            _sprite = _crew.sprite_index;
+            _frame = _crew.image_index;
+            if (!global.gamePaused) {
+                _fps = sprite_get_speed(_crew.sprite_index) * _crew.image_speed;
+                if (sprite_get_speed_type(_crew.sprite_index) == spritespeed_framespergameframe) {
+                    _fps *= game_get_speed(gamespeed_fps);
+                }
+            }
+        }
+        if (variable_instance_exists(_crew, "xScale")) _facing = _crew.xScale;
+        if (variable_instance_exists(_crew, "colorBlend")) _tint = _crew.colorBlend;
+    }
+
+    buffer_write(outbound, buffer_s16, round(_x));
+    buffer_write(outbound, buffer_s16, round(_y));
+    buffer_write(outbound, buffer_u16, clamp(round(_frame * 16), 0, 65535));
+    buffer_write(outbound, buffer_s16, clamp(round(_fps * 16), -32768, 32767));
+    buffer_write(outbound, buffer_s16, round(clamp(_facing, -4, 4) * 100));
+    buffer_write(outbound, buffer_u32, _tint & 0xffffff);
+    write_view_sprite(_sprite);
+};
+
 send_crew_state = function() {
     refresh_crew_layout();
     if (crew_token != 0 && !crew_layout_confirmed) send_crew_layout();
@@ -239,12 +277,11 @@ send_crew_state = function() {
     buffer_write(outbound, buffer_u8, crew_here);
     buffer_write(outbound, buffer_u8, crew_destination);
     buffer_write(outbound, buffer_u8, crew_target_tile);
-    buffer_write(outbound, buffer_s16, crew_token != 0 ? round(shared_crew.x - shared_origin_x) : 0);
-    buffer_write(outbound, buffer_s16, crew_token != 0 ? round(shared_crew.y - shared_origin_y) : 0);
-    steam_net_packet_send(peer_id, outbound, crew_state_size);
+    write_crew_pose();
+    steam_net_packet_send(peer_id, outbound, buffer_tell(outbound));
 };
 
-read_crew_state = function(_snapshot) {
+read_crew_state = function(_snapshot, _size) {
     if (crew_host_mode || _snapshot <= crew_received_snapshot) return;
     var _epoch = buffer_read(inbound, buffer_u32);
     if (_epoch < crew_view_epoch) return;
@@ -255,6 +292,13 @@ read_crew_state = function(_snapshot) {
     var _tile = buffer_read(inbound, buffer_u8);
     var _x = buffer_read(inbound, buffer_s16);
     var _y = buffer_read(inbound, buffer_s16);
+
+    var _frame = buffer_read(inbound, buffer_u16) / 16;
+    var _fps = buffer_read(inbound, buffer_s16) / 16;
+    var _facing = clamp(buffer_read(inbound, buffer_s16) / 100, -4, 4);
+    var _tint = buffer_read(inbound, buffer_u32) & 0xffffff;
+    var _sprite = read_view_sprite(_size);
+    if (is_undefined(_sprite) || buffer_tell(inbound) != _size) return;
 
     begin_guest_epoch(_epoch);
     crew_received_snapshot = _snapshot;
@@ -267,12 +311,13 @@ read_crew_state = function(_snapshot) {
         if (_tile > array_length(_room[4])) return;
     }
 
+    var _first = crew_token == 0;
     crew_token = _epoch;
     crew_here = _here;
     crew_destination = _destination;
     crew_target_tile = _tile;
     crew_arrived = (_flags & 2) != 0;
-    guest_crew_xy = [_x, _y];
+    apply_guest_crew_pose(_x, _y, _sprite, _frame, _fps, _facing, _tint, current_time, _first);
     if (crew_pending != 0 && _ack == crew_pending) {
         crew_pending = 0;
         crew_notice = (_flags & 1) != 0 ? "Order accepted." : "Host rejected the move.";

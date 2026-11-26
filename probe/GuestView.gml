@@ -6,6 +6,50 @@ guest_portrait = -1;
 guest_crew_xy = [0, 0];
 guest_hull_pose = [0, 0, 1, 1];
 
+guest_crew_sprite = -1;
+guest_crew_frame = 0;
+guest_crew_fps = 0;
+guest_crew_facing = 1;
+guest_crew_tint = c_white;
+guest_crew_from = [0, 0];
+guest_crew_sample_ms = 0;
+guest_crew_blend_ms = 1;
+
+sample_guest_crew = function(_now) {
+    var _blend = clamp((_now - guest_crew_sample_ms) / guest_crew_blend_ms, 0, 1);
+    return [
+        lerp(guest_crew_from[0], guest_crew_xy[0], _blend),
+        lerp(guest_crew_from[1], guest_crew_xy[1], _blend)
+    ];
+};
+
+apply_guest_crew_pose = function(_x, _y, _sprite, _frame, _fps, _facing, _tint, _now, _first) {
+    var _from = _first ? [_x, _y] : sample_guest_crew(_now);
+    // Large discontinuities should show immediately.
+    if (point_distance(_from[0], _from[1], _x, _y) > 96) _from = [_x, _y];
+    guest_crew_from = _from;
+    guest_crew_xy = [_x, _y];
+    guest_crew_blend_ms = clamp(_now - guest_crew_sample_ms, 75, 250);
+    guest_crew_sample_ms = _now;
+    guest_crew_sprite = _sprite;
+    guest_crew_frame = _frame;
+    guest_crew_fps = _fps;
+    guest_crew_facing = _facing;
+    guest_crew_tint = _tint;
+};
+
+guest_crew_screen_xy = function(_now) {
+    var _pos = sample_guest_crew(_now);
+    return [guest_layout[0] + _pos[0] * guest_layout[2],
+        guest_layout[1] + _pos[1] * guest_layout[2]];
+};
+
+sample_guest_crew_frame = function(_now, _count) {
+    var _elapsed = clamp(_now - guest_crew_sample_ms, 0, 500);
+    var _frame = floor(guest_crew_frame + guest_crew_fps * _elapsed / 1000);
+    return ((_frame mod _count) + _count) mod _count;
+};
+
 write_view_sprite = function(_sprite) {
     var _name = sprite_exists(_sprite) ? sprite_get_name(_sprite) : "";
     _name = string_copy(_name, 1, 64);
@@ -71,9 +115,8 @@ read_guest_click = function(_gx, _gy, _left_pressed, _right_pressed) {
     var _y = (_gy - guest_layout[1]) / guest_layout[2];
 
     if (_left_pressed) {
-        var _cx = guest_layout[0] + guest_crew_xy[0] * guest_layout[2];
-        var _cy = guest_layout[1] + guest_crew_xy[1] * guest_layout[2];
-        guest_selected = point_distance(_gx, _gy, _cx, _cy) <= 18;
+        var _pos = guest_crew_screen_xy(current_time);
+        guest_selected = point_distance(_gx, _gy, _pos[0], _pos[1]) <= max(18, 12 * guest_layout[2]);
     }
     if (!guest_selected || !_right_pressed) return;
 
@@ -141,13 +184,25 @@ draw_guest_ship = function() {
             draw_circle(_x + _tile[0] * _s, _y + _tile[1] * _s, _targeted ? 7 : 3, true);
         }
     }
-    var _cx = _x + guest_crew_xy[0] * _s;
-    var _cy = _y + guest_crew_xy[1] * _s;
-    draw_set_color(make_color_rgb(28, 38, 47));
-    draw_circle(_cx, _cy, 16, false);
-    if (sprite_exists(guest_portrait)) {
-        draw_sprite_stretched(guest_portrait, 0, _cx - 13, _cy - 13, 26, 26);
+    var _pos = guest_crew_screen_xy(current_time);
+    var _cx = _pos[0];
+    var _cy = _pos[1];
+    if (guest_selected) {
+        draw_sprite_ext(spr_softCircle, 0, _cx, _cy, _s, _s, 0, c_lime, 1);
     }
-    draw_set_color(guest_selected ? c_lime : c_white);
-    draw_circle(_cx, _cy, 16, true);
+    if (guest_crew_sprite != -1) {
+        var _frames = max(1, sprite_get_number(guest_crew_sprite));
+        var _frame = sample_guest_crew_frame(current_time, _frames);
+        draw_sprite_ext(guest_crew_sprite, _frame, _cx, _cy,
+            _s * guest_crew_facing, _s, 0, guest_crew_tint, 1);
+    } else {
+        draw_set_color(make_color_rgb(28, 38, 47));
+        draw_circle(_cx, _cy, 16, false);
+        if (sprite_exists(guest_portrait)) {
+            draw_sprite_stretched(guest_portrait, 0, _cx - 13, _cy - 13, 26, 26);
+        }
+        draw_set_color(guest_selected ? c_lime : c_white);
+        draw_circle(_cx, _cy, 16, true);
+    }
+
 };
