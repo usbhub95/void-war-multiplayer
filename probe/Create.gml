@@ -18,11 +18,11 @@ reply_count = 0;
 
 probe_magic = 0x31505756;
 game_build = 26906873;
-probe_version = 2;
+probe_version = 3;
 packet_length = 15;
 ping_packet = 1;
 pong_packet = 2;
-max_packet_length = 123;
+max_packet_length = 361;
 outbound = buffer_create(max_packet_length, buffer_fixed, 1);
 inbound = buffer_create(max_packet_length, buffer_fixed, 1);
 sequence = current_time;

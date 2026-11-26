@@ -32,6 +32,30 @@ foreach (var name in steamFunctions)
     }
 }
 
+const string guestRoom = "rmVoidWarGuestView";
+if (Data.Rooms.ByName(guestRoom) != null)
+    throw new InvalidOperationException("The guest view room already exists in this game data.");
+var viewRoom = new UndertaleRoom
+{
+    Name = Data.Strings.MakeString(guestRoom),
+    Width = 1280,
+    Height = 720,
+    Speed = 0,
+    DrawBackgroundColor = false,
+    Flags = room.Flags & ~(UndertaleRoom.RoomEntryFlags.EnableViews
+        | UndertaleRoom.RoomEntryFlags.ShowColor | UndertaleRoom.RoomEntryFlags.DoNotClearDisplayBuffer)
+};
+viewRoom.Backgrounds.Clear();
+viewRoom.Layers.Add(new UndertaleRoom.Layer
+{
+    LayerName = Data.Strings.MakeString("Instances"),
+    LayerId = Data.Rooms.SelectMany(candidate => candidate.Layers).Max(layer => layer.LayerId) + 1,
+    LayerType = UndertaleRoom.LayerType.Instances,
+    LayerDepth = 0,
+    Data = new UndertaleRoom.Layer.LayerInstancesData()
+});
+Data.Rooms.Add(viewRoom);
+
 var source = Path.GetDirectoryName(ScriptPath);
 var code = new CodeImportGroup(Data);
 foreach (var (eventName, filename) in new[] {
@@ -42,7 +66,8 @@ foreach (var (eventName, filename) in new[] {
 }) {
     var gml = File.ReadAllText(Path.Combine(source, filename));
     if (eventName == "Create_0")
-        gml += "\n" + File.ReadAllText(Path.Combine(source, "CrewTest.gml"));
+        gml += "\n" + File.ReadAllText(Path.Combine(source, "CrewTest.gml"))
+            + "\n" + File.ReadAllText(Path.Combine(source, "GuestView.gml"));
     code.QueueReplace($"gml_Object_{objectName}_{eventName}", gml);
 }
 code.QueueReplace(roomEntry, $"if (!instance_exists({objectName})) instance_create_depth(0, 0, 100, {objectName});");

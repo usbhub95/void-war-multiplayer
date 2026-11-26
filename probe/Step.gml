@@ -1,3 +1,20 @@
+if (room == guest_view_room) {
+    if (peer_id == 0) {
+        room_goto(rmMainMenu);
+        exit;
+    }
+    if (window_has_focus() && keyboard_check_pressed(vk_f5)) {
+        guest_selected = false;
+        room_goto(rmMainMenu);
+        exit;
+    }
+} else if (room == rmMainMenu && !crew_host_mode && panel_open && !entry_open
+        && peer_id != 0 && crew_token != 0 && window_has_focus() && keyboard_check_pressed(vk_f5)) {
+    guest_selected = false;
+    room_goto(guest_view_room);
+    exit;
+}
+
 if (room != rmMainMenu && peer_id == 0) exit;
 
 if (entry_open) {

@@ -9,6 +9,7 @@ crew_snapshot_number = 0;
 crew_order_number = 0;
 
 clear_crew_test = function() {
+    guest_selected = false;
     shared_crew = noone;
     shared_cells = [];
     shared_origin_x = 0;
@@ -85,7 +86,8 @@ send_crew_state = function() {
             clear_crew_test();
             break;
         }
-        array_push(crew_rooms, [round(_cell.x - shared_origin_x), round(_cell.y - shared_origin_y)]);
+        array_push(crew_rooms, [round(_cell.x - shared_origin_x), round(_cell.y - shared_origin_y),
+            round(_cell.sprite_width), round(_cell.sprite_height)]);
     }
 
     crew_here = 0;
@@ -110,7 +112,10 @@ send_crew_state = function() {
         var _position = crew_rooms[_index];
         buffer_write(outbound, buffer_s16, _position[0]);
         buffer_write(outbound, buffer_s16, _position[1]);
+        buffer_write(outbound, buffer_u16, _position[2]);
+        buffer_write(outbound, buffer_u16, _position[3]);
     }
+    if (crew_token != 0) write_guest_geometry();
     steam_net_packet_send(peer_id, outbound, buffer_tell(outbound));
 };
 
@@ -123,10 +128,40 @@ read_crew_state = function(_snapshot, _size) {
     var _here = buffer_read(inbound, buffer_u8);
     var _destination = buffer_read(inbound, buffer_u8);
     var _count = buffer_read(inbound, buffer_u8);
-    if (_count > crew_max_rooms || _size != crew_state_base_size + _count * 4
+    var _rooms_end = crew_state_base_size + _count * 8;
+    if (_count > crew_max_rooms || _size < _rooms_end
             || _here > _count || _destination > _count || (_token == 0) != (_count == 0)) return;
+    if ((_count == 0 && _size != _rooms_end) || (_count > 0 && _size < _rooms_end + 14)) return;
+
+    var _rooms = [];
+    for (var _index = 0; _index < _count; _index += 1) {
+        var _x = buffer_read(inbound, buffer_s16);
+        var _y = buffer_read(inbound, buffer_s16);
+        var _w = buffer_read(inbound, buffer_u16);
+        var _h = buffer_read(inbound, buffer_u16);
+        if (_w == 0 || _w > 512 || _h == 0 || _h > 512) return;
+        array_push(_rooms, [_x, _y, _w, _h]);
+    }
+
+    if (_count > 0) {
+        var _hx = buffer_read(inbound, buffer_s16);
+        var _hy = buffer_read(inbound, buffer_s16);
+        var _xs = buffer_read(inbound, buffer_s16) / 100;
+        var _ys = buffer_read(inbound, buffer_s16) / 100;
+        var _hull = read_view_sprite(_size);
+        if (is_undefined(_hull) || buffer_tell(inbound) + 5 > _size) return;
+        var _cx = buffer_read(inbound, buffer_s16);
+        var _cy = buffer_read(inbound, buffer_s16);
+        var _portrait = read_view_sprite(_size);
+        if (is_undefined(_portrait) || buffer_tell(inbound) != _size) return;
+        guest_hull = _hull;
+        guest_portrait = _portrait;
+        guest_hull_pose = [_hx, _hy, clamp(_xs, -4, 4), clamp(_ys, -4, 4)];
+        guest_crew_xy = [_cx, _cy];
+    }
 
     if (_token != crew_token) {
+        guest_selected = false;
         crew_pending = 0;
         crew_choice = 1;
         crew_notice = "";
@@ -136,12 +171,7 @@ read_crew_state = function(_snapshot, _size) {
     crew_here = _here;
     crew_destination = _destination;
     crew_arrived = (_flags & 2) != 0;
-    crew_rooms = [];
-    for (var _index = 0; _index < _count; _index += 1) {
-        var _x = buffer_read(inbound, buffer_s16);
-        var _y = buffer_read(inbound, buffer_s16);
-        array_push(crew_rooms, [_x, _y]);
-    }
+    crew_rooms = _rooms;
     if (crew_pending != 0 && _ack == crew_pending) {
         crew_pending = 0;
         crew_notice = (_flags & 1) != 0 ? "Order accepted." : "Host rejected the move.";
@@ -172,6 +202,14 @@ read_crew_order = function(_order) {
     crew_accepted = _crew.currentCellID == _cell;
 };
 
+queue_crew_order = function(_room) {
+    crew_order_number += 1;
+    crew_pending = crew_order_number;
+    crew_order_room = _room;
+    crew_next_update = 0;
+    crew_notice = "Waiting for host...";
+};
+
 update_crew_test = function() {
     if (crew_host_mode) {
         if (window_has_focus() && keyboard_check_pressed(vk_f6)) {
@@ -185,16 +223,20 @@ update_crew_test = function() {
         return;
     }
 
-    if (crew_token == 0 || !window_has_focus()) return;
-    var _count = array_length(crew_rooms);
-    if (keyboard_check_pressed(vk_left)) crew_choice = max(1, crew_choice - 1);
-    if (keyboard_check_pressed(vk_right)) crew_choice = min(_count, crew_choice + 1);
-    if (keyboard_check_pressed(vk_enter) && crew_pending == 0) {
-        crew_order_number += 1;
-        crew_pending = crew_order_number;
-        crew_order_room = crew_choice;
-        crew_next_update = 0;
-        crew_notice = "Waiting for host...";
+    if (crew_token == 0) return;
+    if (window_has_focus()) {
+        if (room == guest_view_room) {
+            var _left_pressed = mouse_check_button_pressed(mb_left);
+            var _right_pressed = mouse_check_button_pressed(mb_right);
+            if (_left_pressed || _right_pressed) {
+                read_guest_click(device_mouse_x_to_gui(0), device_mouse_y_to_gui(0), _left_pressed, _right_pressed);
+            }
+        } else if (panel_open) {
+            var _count = array_length(crew_rooms);
+            if (keyboard_check_pressed(vk_left)) crew_choice = max(1, crew_choice - 1);
+            if (keyboard_check_pressed(vk_right)) crew_choice = min(_count, crew_choice + 1);
+            if (keyboard_check_pressed(vk_enter) && crew_pending == 0) queue_crew_order(crew_choice);
+        }
     }
     if (crew_pending != 0 && current_time >= crew_next_update) {
         write_probe_header(crew_order_kind, crew_pending);
