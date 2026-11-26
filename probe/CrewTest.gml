@@ -1,8 +1,10 @@
 crew_host_mode = false;
 crew_state_kind = 3;
 crew_order_kind = 4;
-crew_state_base_size = packet_length + 12;
-crew_order_size = packet_length + 5;
+crew_layout_kind = 5;
+crew_layout_ack_kind = 6;
+crew_state_size = packet_length + 16;
+crew_order_size = packet_length + 6;
 crew_max_rooms = 24;
 crew_epoch = current_time;
 crew_snapshot_number = 0;
@@ -11,6 +13,10 @@ crew_order_number = 0;
 clear_crew_test = function() {
     guest_selected = false;
     shared_crew = noone;
+    shared_hull = noone;
+    crew_layout_confirmed = false;
+    crew_layout_epoch = 0;
+    crew_view_epoch = 0;
     shared_cells = [];
     shared_origin_x = 0;
     shared_origin_y = 0;
@@ -18,6 +24,7 @@ clear_crew_test = function() {
     crew_token = 0;
     crew_here = 0;
     crew_destination = 0;
+    crew_target_tile = 0;
     crew_arrived = false;
     crew_choice = 1;
     crew_ack = 0;
@@ -48,8 +55,13 @@ arm_crew_test = function() {
         return;
     }
 
+    capture_crew_layout(_crew);
+};
+
+capture_crew_layout = function(_crew) {
     clear_crew_test();
     shared_crew = _crew;
+    shared_hull = get_hull(1);
     var _initial_cell = _crew.currentCellID;
     var _cells = [_initial_cell];
     var _limit = crew_max_rooms;
@@ -62,6 +74,17 @@ arm_crew_test = function() {
     shared_cells = _cells;
     shared_origin_x = _initial_cell.x;
     shared_origin_y = _initial_cell.y;
+    for (var _i = 0; _i < array_length(_cells); _i += 1) {
+        var _cell = _cells[_i];
+        var _tiles = [];
+        var _count = cell_get_slot_count(_cell);
+        for (var _tile = 1; _tile <= _count; _tile += 1) {
+            array_push(_tiles, [round(cell_get_slot_x(_cell, _tile) - shared_origin_x),
+                round(cell_get_slot_y(_cell, _tile) - shared_origin_y)]);
+        }
+        array_push(crew_rooms, [round(_cell.x - shared_origin_x), round(_cell.y - shared_origin_y),
+            round(_cell.sprite_width), round(_cell.sprite_height), _tiles]);
+    }
     crew_epoch += 1;
     crew_token = crew_epoch;
 };
@@ -73,28 +96,135 @@ crew_room_index = function(_cell) {
     return 0;
 };
 
-send_crew_state = function() {
-    if (crew_token != 0 && (!combat_ready() || !instance_exists(shared_crew)
-            || !shared_crew.allied || crew_is_dead(shared_crew))) {
-        clear_crew_test();
+retire_crew_layout = function() {
+    clear_crew_test();
+    crew_epoch += 1;
+};
+
+refresh_crew_layout = function() {
+    if (crew_token == 0) return;
+    if (!combat_ready() || !instance_exists(shared_crew) || !shared_crew.allied
+            || crew_is_dead(shared_crew) || get_hull(1) != shared_hull
+            || !instance_exists(shared_crew.currentCellID)
+            || !shared_crew.currentCellID.allied) {
+        retire_crew_layout();
+        return;
     }
 
-    crew_rooms = [];
-    for (var _index = 0; _index < array_length(shared_cells); _index += 1) {
-        var _cell = shared_cells[_index];
-        if (!instance_exists(_cell)) {
-            clear_crew_test();
-            break;
+    for (var _i = 0; _i < array_length(shared_cells); _i += 1) {
+        if (!instance_exists(shared_cells[_i])) {
+            capture_crew_layout(shared_crew);
+            return;
         }
-        array_push(crew_rooms, [round(_cell.x - shared_origin_x), round(_cell.y - shared_origin_y),
-            round(_cell.sprite_width), round(_cell.sprite_height)]);
     }
 
+    if (!objects_on_same_hull(shared_crew.currentCellID, shared_cells[0])) {
+        retire_crew_layout();
+        return;
+    }
+    shared_origin_x = shared_cells[0].x;
+    shared_origin_y = shared_cells[0].y;
+    for (var _i = 0; _i < array_length(shared_cells); _i += 1) {
+        var _cell = shared_cells[_i];
+        var _layout = crew_rooms[_i];
+        if (round(_cell.x - shared_origin_x) != _layout[0] || round(_cell.y - shared_origin_y) != _layout[1]
+                || round(_cell.sprite_width) != _layout[2] || round(_cell.sprite_height) != _layout[3]) {
+            capture_crew_layout(shared_crew);
+            return;
+        }
+    }
+};
+
+send_crew_layout = function() {
+    write_probe_header(crew_layout_kind, crew_token);
+    buffer_write(outbound, buffer_u8, array_length(crew_rooms));
+    for (var _i = 0; _i < array_length(crew_rooms); _i += 1) {
+        var _layout = crew_rooms[_i];
+        buffer_write(outbound, buffer_s16, _layout[0]);
+        buffer_write(outbound, buffer_s16, _layout[1]);
+        buffer_write(outbound, buffer_u16, _layout[2]);
+        buffer_write(outbound, buffer_u16, _layout[3]);
+        var _tiles = _layout[4];
+        buffer_write(outbound, buffer_u8, array_length(_tiles));
+        for (var _j = 0; _j < array_length(_tiles); _j += 1) {
+            var _tile = _tiles[_j];
+            buffer_write(outbound, buffer_s16, _tile[0]);
+            buffer_write(outbound, buffer_s16, _tile[1]);
+        }
+    }
+    write_guest_layout_assets();
+    steam_net_packet_send(peer_id, outbound, buffer_tell(outbound));
+};
+
+begin_guest_epoch = function(_epoch) {
+    if (_epoch == crew_view_epoch) return;
+    crew_view_epoch = _epoch;
+    crew_layout_epoch = 0;
+    crew_token = 0;
+    crew_rooms = [];
+    guest_selected = false;
+    crew_pending = 0;
+    crew_choice = 1;
+    crew_notice = "";
+};
+
+read_crew_layout = function(_epoch, _size) {
+    if (crew_host_mode || _epoch <= 0 || _epoch < crew_view_epoch || _size < packet_length + 1) return;
+    if (_epoch == crew_layout_epoch) {
+        send_probe(crew_layout_ack_kind, _epoch);
+        return;
+    }
+
+    var _count = buffer_read(inbound, buffer_u8);
+    if (_count < 1 || _count > crew_max_rooms) return;
+    var _rooms = [];
+    for (var _i = 0; _i < _count; _i += 1) {
+        if (buffer_tell(inbound) + 9 > _size) return;
+        var _x = buffer_read(inbound, buffer_s16);
+        var _y = buffer_read(inbound, buffer_s16);
+        var _w = buffer_read(inbound, buffer_u16);
+        var _h = buffer_read(inbound, buffer_u16);
+        var _tile_count = buffer_read(inbound, buffer_u8);
+        if (_w == 0 || _w > 512 || _h == 0 || _h > 512 || _tile_count > 4
+                || buffer_tell(inbound) + _tile_count * 4 > _size) return;
+        var _tiles = [];
+        repeat (_tile_count) {
+            var _tx = buffer_read(inbound, buffer_s16);
+            var _ty = buffer_read(inbound, buffer_s16);
+            array_push(_tiles, [_tx, _ty]);
+        }
+        array_push(_rooms, [_x, _y, _w, _h, _tiles]);
+    }
+
+    if (buffer_tell(inbound) + 10 > _size) return;
+    var _hx = buffer_read(inbound, buffer_s16);
+    var _hy = buffer_read(inbound, buffer_s16);
+    var _xs = buffer_read(inbound, buffer_s16) / 100;
+    var _ys = buffer_read(inbound, buffer_s16) / 100;
+    var _hull = read_view_sprite(_size);
+    if (is_undefined(_hull)) return;
+    var _portrait = read_view_sprite(_size);
+    if (is_undefined(_portrait) || buffer_tell(inbound) != _size) return;
+
+    begin_guest_epoch(_epoch);
+    crew_layout_epoch = _epoch;
+    crew_rooms = _rooms;
+    guest_hull = _hull;
+    guest_portrait = _portrait;
+    guest_hull_pose = [_hx, _hy, clamp(_xs, -4, 4), clamp(_ys, -4, 4)];
+    send_probe(crew_layout_ack_kind, _epoch);
+};
+
+send_crew_state = function() {
+    refresh_crew_layout();
+    if (crew_token != 0 && !crew_layout_confirmed) send_crew_layout();
     crew_here = 0;
     crew_destination = 0;
+    crew_target_tile = 0;
     crew_arrived = false;
     if (crew_token != 0) {
         crew_destination = crew_room_index(shared_crew.currentCellID);
+        if (crew_destination > 0) crew_target_tile = shared_crew.currentCellSlot;
         crew_arrived = crew_has_reached_destination(shared_crew);
         crew_here = crew_arrived
             ? crew_destination : crew_room_index(shared_crew.collidingCellID);
@@ -102,87 +232,60 @@ send_crew_state = function() {
 
     crew_snapshot_number += 1;
     write_probe_header(crew_state_kind, crew_snapshot_number);
-    buffer_write(outbound, buffer_u32, crew_token);
+    buffer_write(outbound, buffer_u32, crew_epoch);
     buffer_write(outbound, buffer_u32, crew_ack);
-    buffer_write(outbound, buffer_u8, (crew_accepted ? 1 : 0) + (crew_arrived ? 2 : 0));
+    var _flags = (crew_accepted ? 1 : 0) + (crew_arrived ? 2 : 0) + (crew_token != 0 ? 4 : 0);
+    buffer_write(outbound, buffer_u8, _flags);
     buffer_write(outbound, buffer_u8, crew_here);
     buffer_write(outbound, buffer_u8, crew_destination);
-    buffer_write(outbound, buffer_u8, array_length(crew_rooms));
-    for (var _index = 0; _index < array_length(crew_rooms); _index += 1) {
-        var _position = crew_rooms[_index];
-        buffer_write(outbound, buffer_s16, _position[0]);
-        buffer_write(outbound, buffer_s16, _position[1]);
-        buffer_write(outbound, buffer_u16, _position[2]);
-        buffer_write(outbound, buffer_u16, _position[3]);
-    }
-    if (crew_token != 0) write_guest_geometry();
-    steam_net_packet_send(peer_id, outbound, buffer_tell(outbound));
+    buffer_write(outbound, buffer_u8, crew_target_tile);
+    buffer_write(outbound, buffer_s16, crew_token != 0 ? round(shared_crew.x - shared_origin_x) : 0);
+    buffer_write(outbound, buffer_s16, crew_token != 0 ? round(shared_crew.y - shared_origin_y) : 0);
+    steam_net_packet_send(peer_id, outbound, crew_state_size);
 };
 
-read_crew_state = function(_snapshot, _size) {
-    if (crew_host_mode || _snapshot <= crew_received_snapshot || _size < crew_state_base_size) return;
-
-    var _token = buffer_read(inbound, buffer_u32);
+read_crew_state = function(_snapshot) {
+    if (crew_host_mode || _snapshot <= crew_received_snapshot) return;
+    var _epoch = buffer_read(inbound, buffer_u32);
+    if (_epoch < crew_view_epoch) return;
     var _ack = buffer_read(inbound, buffer_u32);
     var _flags = buffer_read(inbound, buffer_u8);
     var _here = buffer_read(inbound, buffer_u8);
     var _destination = buffer_read(inbound, buffer_u8);
-    var _count = buffer_read(inbound, buffer_u8);
-    var _rooms_end = crew_state_base_size + _count * 8;
-    if (_count > crew_max_rooms || _size < _rooms_end
-            || _here > _count || _destination > _count || (_token == 0) != (_count == 0)) return;
-    if ((_count == 0 && _size != _rooms_end) || (_count > 0 && _size < _rooms_end + 14)) return;
+    var _tile = buffer_read(inbound, buffer_u8);
+    var _x = buffer_read(inbound, buffer_s16);
+    var _y = buffer_read(inbound, buffer_s16);
 
-    var _rooms = [];
-    for (var _index = 0; _index < _count; _index += 1) {
-        var _x = buffer_read(inbound, buffer_s16);
-        var _y = buffer_read(inbound, buffer_s16);
-        var _w = buffer_read(inbound, buffer_u16);
-        var _h = buffer_read(inbound, buffer_u16);
-        if (_w == 0 || _w > 512 || _h == 0 || _h > 512) return;
-        array_push(_rooms, [_x, _y, _w, _h]);
-    }
-
-    if (_count > 0) {
-        var _hx = buffer_read(inbound, buffer_s16);
-        var _hy = buffer_read(inbound, buffer_s16);
-        var _xs = buffer_read(inbound, buffer_s16) / 100;
-        var _ys = buffer_read(inbound, buffer_s16) / 100;
-        var _hull = read_view_sprite(_size);
-        if (is_undefined(_hull) || buffer_tell(inbound) + 5 > _size) return;
-        var _cx = buffer_read(inbound, buffer_s16);
-        var _cy = buffer_read(inbound, buffer_s16);
-        var _portrait = read_view_sprite(_size);
-        if (is_undefined(_portrait) || buffer_tell(inbound) != _size) return;
-        guest_hull = _hull;
-        guest_portrait = _portrait;
-        guest_hull_pose = [_hx, _hy, clamp(_xs, -4, 4), clamp(_ys, -4, 4)];
-        guest_crew_xy = [_cx, _cy];
-    }
-
-    if (_token != crew_token) {
-        guest_selected = false;
-        crew_pending = 0;
-        crew_choice = 1;
-        crew_notice = "";
-    }
+    begin_guest_epoch(_epoch);
     crew_received_snapshot = _snapshot;
-    crew_token = _token;
+    if ((_flags & 4) == 0 || crew_layout_epoch != _epoch || _epoch == 0) return;
+    var _count = array_length(crew_rooms);
+    if (_here > _count || _destination > _count || _tile > 4
+            || (_destination == 0 && _tile != 0)) return;
+    if (_destination > 0) {
+        var _room = crew_rooms[_destination - 1];
+        if (_tile > array_length(_room[4])) return;
+    }
+
+    crew_token = _epoch;
     crew_here = _here;
     crew_destination = _destination;
+    crew_target_tile = _tile;
     crew_arrived = (_flags & 2) != 0;
-    crew_rooms = _rooms;
+    guest_crew_xy = [_x, _y];
     if (crew_pending != 0 && _ack == crew_pending) {
         crew_pending = 0;
         crew_notice = (_flags & 1) != 0 ? "Order accepted." : "Host rejected the move.";
     }
 };
 
+
 read_crew_order = function(_order) {
     if (!crew_host_mode || crew_token == 0 || _order <= crew_ack) return;
 
     var _token = buffer_read(inbound, buffer_u32);
     var _slot = buffer_read(inbound, buffer_u8);
+    var _tile = buffer_read(inbound, buffer_u8);
     if (_token != crew_token) return;
     crew_ack = _order;
     crew_accepted = false;
@@ -198,14 +301,30 @@ read_crew_order = function(_order) {
             || crew_check_keyword(_crew, oKWImmobilized) || crew_check_keyword(_crew, oKWSessile)
             || !objects_on_same_hull(_crew, _cell) || !crew_checkDestinationIsReachable(_crew, _cell)) return;
 
-    if (_crew.currentCellID != _cell) crew_move_set_target(_crew, _cell);
-    crew_accepted = _crew.currentCellID == _cell;
+    if (_tile == 0) {
+        if (_crew.currentCellID != _cell) crew_move_set_target(_crew, _cell);
+        crew_accepted = _crew.currentCellID == _cell;
+        return;
+    }
+    if (_tile > cell_get_slot_count(_cell)) return;
+    if (_crew.currentCellID == _cell && _crew.currentCellSlot == _tile) {
+        crew_accepted = true;
+        return;
+    }
+    if (slot_is_vacant(_cell, _tile, _crew.allied)) {
+        crew_move_set_target_slot(_crew, _cell, _tile, 1);
+        crew_accepted = _crew.currentCellID == _cell && _crew.currentCellSlot == _tile;
+    } else {
+        crew_move_set_target_and_push_crew_nearby_slot(_crew, _cell);
+        crew_accepted = _crew.currentCellID == _cell;
+    }
 };
 
-queue_crew_order = function(_room) {
+queue_crew_order = function(_room, _tile) {
     crew_order_number += 1;
     crew_pending = crew_order_number;
     crew_order_room = _room;
+    crew_order_tile = _tile;
     crew_next_update = 0;
     crew_notice = "Waiting for host...";
 };
@@ -235,13 +354,14 @@ update_crew_test = function() {
             var _count = array_length(crew_rooms);
             if (keyboard_check_pressed(vk_left)) crew_choice = max(1, crew_choice - 1);
             if (keyboard_check_pressed(vk_right)) crew_choice = min(_count, crew_choice + 1);
-            if (keyboard_check_pressed(vk_enter) && crew_pending == 0) queue_crew_order(crew_choice);
+            if (keyboard_check_pressed(vk_enter) && crew_pending == 0) queue_crew_order(crew_choice, 0);
         }
     }
     if (crew_pending != 0 && current_time >= crew_next_update) {
         write_probe_header(crew_order_kind, crew_pending);
         buffer_write(outbound, buffer_u32, crew_token);
         buffer_write(outbound, buffer_u8, crew_order_room);
+        buffer_write(outbound, buffer_u8, crew_order_tile);
         steam_net_packet_send(peer_id, outbound, crew_order_size);
         crew_next_update = current_time + 250;
     }

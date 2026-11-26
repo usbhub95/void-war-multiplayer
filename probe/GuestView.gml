@@ -28,7 +28,7 @@ read_view_sprite = function(_size) {
     return _name != "" && asset_get_type(_name) == asset_sprite ? asset_get_index(_name) : -1;
 };
 
-write_guest_geometry = function() {
+write_guest_layout_assets = function() {
     var _hull = get_hull(1);
     if (instance_exists(_hull)) {
         buffer_write(outbound, buffer_s16, round(_hull.x - shared_origin_x));
@@ -40,8 +40,6 @@ write_guest_geometry = function() {
         repeat (4) buffer_write(outbound, buffer_s16, 0);
         write_view_sprite(-1);
     }
-    buffer_write(outbound, buffer_s16, round(shared_crew.x - shared_origin_x));
-    buffer_write(outbound, buffer_s16, round(shared_crew.y - shared_origin_y));
     write_view_sprite(variable_instance_exists(shared_crew, "sprite_portrait") ? shared_crew.sprite_portrait : -1);
 };
 
@@ -84,7 +82,18 @@ read_guest_click = function(_gx, _gy, _left_pressed, _right_pressed) {
         // Half-open bounds give shared edges one owner.
         if (_x >= _cell[0] && _x < _cell[0] + _cell[2]
                 && _y >= _cell[1] && _y < _cell[1] + _cell[3]) {
-            queue_crew_order(_i + 1);
+            var _tiles = _cell[4];
+            var _nearest = 0;
+            var _distance = 0;
+            for (var _j = 0; _j < array_length(_tiles); _j += 1) {
+                var _tile = _tiles[_j];
+                var _d = point_distance(_x, _y, _tile[0], _tile[1]);
+                if (_nearest == 0 || _d < _distance) {
+                    _distance = _d;
+                    _nearest = _j + 1;
+                }
+            }
+            queue_crew_order(_i + 1, _nearest);
             return;
         }
     }
@@ -99,9 +108,9 @@ draw_guest_ship = function() {
         draw_text(24, 48, "Waiting for the host to share crew.");
         return;
     }
-    draw_text(24, 48, "Left-click crew to select   Right-click room to move"
+    draw_text(24, 48, "Left-click crew to select   Right-click a tile to move"
         + "\n" + (crew_arrived ? "Arrived" : "Moving")
-        + "   Target: " + string(crew_destination) + "   " + crew_notice);
+        + "   Room: " + string(crew_destination) + "   Tile: " + string(crew_target_tile) + "   " + crew_notice);
 
     layout_guest_view();
     var _x = guest_layout[0];
@@ -124,6 +133,13 @@ draw_guest_ship = function() {
         draw_set_alpha(1);
         draw_set_color(_i + 1 == crew_destination ? c_yellow : c_gray);
         draw_rectangle(_left, _top, _right, _bottom, true);
+        var _tiles = _cell[4];
+        for (var _j = 0; _j < array_length(_tiles); _j += 1) {
+            var _tile = _tiles[_j];
+            var _targeted = _i + 1 == crew_destination && _j + 1 == crew_target_tile;
+            draw_set_color(_targeted ? c_yellow : c_silver);
+            draw_circle(_x + _tile[0] * _s, _y + _tile[1] * _s, _targeted ? 7 : 3, true);
+        }
     }
     var _cx = _x + guest_crew_xy[0] * _s;
     var _cy = _y + guest_crew_xy[1] * _s;

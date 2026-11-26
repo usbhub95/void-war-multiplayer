@@ -18,11 +18,11 @@ reply_count = 0;
 
 probe_magic = 0x31505756;
 game_build = 26906873;
-probe_version = 3;
+probe_version = 4;
 packet_length = 15;
 ping_packet = 1;
 pong_packet = 2;
-max_packet_length = 361;
+max_packet_length = 754;
 outbound = buffer_create(max_packet_length, buffer_fixed, 1);
 inbound = buffer_create(max_packet_length, buffer_fixed, 1);
 sequence = current_time;
@@ -102,11 +102,21 @@ read_probe = function() {
     var _kind = buffer_read(inbound, buffer_u8);
     var _sequence = buffer_read(inbound, buffer_u32);
     if (reply_count > 0 && _kind == crew_state_kind) {
-        read_crew_state(_sequence, _size);
+        if (_size == crew_state_size) read_crew_state(_sequence);
         return;
     }
-    if (reply_count > 0 && _kind == crew_order_kind && _size == crew_order_size) {
-        read_crew_order(_sequence);
+    if (reply_count > 0 && _kind == crew_order_kind) {
+        if (_size == crew_order_size) read_crew_order(_sequence);
+        return;
+    }
+    if (reply_count > 0 && _kind == crew_layout_kind) {
+        read_crew_layout(_sequence, _size);
+        return;
+    }
+    if (reply_count > 0 && _kind == crew_layout_ack_kind) {
+        if (_size == packet_length && crew_host_mode && _sequence == crew_token) {
+            crew_layout_confirmed = true;
+        }
         return;
     }
     if (_size != packet_length) return;

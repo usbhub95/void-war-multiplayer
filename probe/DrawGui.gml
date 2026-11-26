@@ -50,7 +50,7 @@ if (room == guest_view_room) {
 
     var _width = string_width(_text) + 24;
     var _height = string_height(_text) + 20;
-    var _show_map = _show_crew && array_length(crew_rooms) > 0;
+    var _show_map = _show_crew && crew_token != 0 && array_length(crew_rooms) > 0;
     if (_show_map) {
         _width = max(_width, 294);
         _height += 132;
