@@ -2,6 +2,8 @@
 
 This Windows Steam mod tests whether two copies of Void War can exchange messages using the game's bundled Steam P2P extension. Both players connect from the title screen. The experimental crew test keeps that connection open while the host starts a fight.
 
+For project status, architecture, and verification history, see the [development handoff](DEVELOPMENT.md).
+
 ## Build
 
 Use the full Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). In Steam, select **Void War → Manage → Browse local files** to find your original `data.win`. Extract the CLI zip, then run this from the repository in PowerShell with your two paths.
@@ -29,7 +31,7 @@ Use two Windows PCs on separate internet connections, signed into separate Steam
 4. For a one-sided test, leave one panel idle and start the probe on the other PC. The active side should time out without receiving a reply. With a third consenting tester, attempt a probe against a player who selected someone else and verify that the third tester receives no replies.
 5. To check protocol mismatch, build a test copy from a scratch checkout with `probe_version` changed in `probe/Create.gml`. Connect it to the standard probe. Neither side should report a successful connection. At least one panel should report **Peer has a different build or probe version.** Restore both PCs to the standard probe before retesting.
 
-Record the result on both PCs and the status shown if either fails. Direct IP is the planned fallback if the Steam probe fails the remote test. Steam's bundled P2P API is [deprecated by Valve](https://partner.steamgames.com/doc/api/ISteamNetworking).
+Record the result on both PCs and the status shown if either fails. The original connection milestone passed over Steam on two PCs. Repeat these checks when validating a new protocol build. Steam's bundled P2P API is [deprecated by Valve](https://partner.steamgames.com/doc/api/ISteamNetworking).
 
 ## Shared crew playtest
 
