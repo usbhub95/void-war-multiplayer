@@ -1,3 +1,5 @@
+if (room != rmMainMenu && peer_id == 0) exit;
+
 if (entry_open) {
     // Keep the draft in the probe across Windows focus changes.
     if (!window_has_focus()) exit;
@@ -53,7 +55,10 @@ if (keyboard_check_pressed(vk_f8)) {
 }
 if (!panel_open) exit;
 
-if (window_has_focus() && keyboard_check_pressed(vk_f9) && peer_id == 0) {
+if (room == rmMainMenu && window_has_focus() && peer_id == 0 && keyboard_check_pressed(vk_f7)) {
+    crew_host_mode = !crew_host_mode;
+}
+if (room == rmMainMenu && window_has_focus() && keyboard_check_pressed(vk_f9) && peer_id == 0) {
     if (steam_initialised() && steam_is_user_logged_on()) {
         entry_text = peer_text;
         entry_error = "";
@@ -100,3 +105,5 @@ if (current_time >= next_ping_at) {
         probe_status = "Steam send failed. Retrying...";
     }
 }
+
+if (reply_count > 0) update_crew_test();

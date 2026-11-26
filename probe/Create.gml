@@ -18,12 +18,13 @@ reply_count = 0;
 
 probe_magic = 0x31505756;
 game_build = 26906873;
-probe_version = 1;
+probe_version = 2;
 packet_length = 15;
 ping_packet = 1;
 pong_packet = 2;
-outbound = buffer_create(packet_length, buffer_fixed, 1);
-inbound = buffer_create(packet_length, buffer_fixed, 1);
+max_packet_length = 123;
+outbound = buffer_create(max_packet_length, buffer_fixed, 1);
+inbound = buffer_create(max_packet_length, buffer_fixed, 1);
 sequence = current_time;
 pending_sequence = -1;
 ping_sent_at = 0;
@@ -47,6 +48,7 @@ enter_peer_id = function(_text) {
         return;
     }
 
+    clear_crew_test();
     peer_text = _text;
     peer_id = _target;
     round_trip_ms = -1;
@@ -64,21 +66,27 @@ stop_probe = function(_reason) {
     peer_id = int64(0);
     pending_sequence = -1;
     probe_status = _reason;
+    clear_crew_test();
 };
 
-send_probe = function(_kind, _sequence) {
+write_probe_header = function(_kind, _sequence) {
     buffer_seek(outbound, buffer_seek_start, 0);
     buffer_write(outbound, buffer_u32, probe_magic);
     buffer_write(outbound, buffer_u32, game_build);
     buffer_write(outbound, buffer_u16, probe_version);
     buffer_write(outbound, buffer_u8, _kind);
     buffer_write(outbound, buffer_u32, _sequence);
+};
+
+send_probe = function(_kind, _sequence) {
+    write_probe_header(_kind, _sequence);
     return steam_net_packet_send(peer_id, outbound, packet_length);
 };
 
 read_probe = function() {
     if (steam_net_packet_get_sender_id() != peer_id) return;
-    if (steam_net_packet_get_size() != packet_length) return;
+    var _size = steam_net_packet_get_size();
+    if (_size < packet_length || _size > max_packet_length) return;
     if (!steam_net_packet_get_data(inbound)) return;
 
     buffer_seek(inbound, buffer_seek_start, 0);
@@ -93,6 +101,16 @@ read_probe = function() {
 
     var _kind = buffer_read(inbound, buffer_u8);
     var _sequence = buffer_read(inbound, buffer_u32);
+    if (reply_count > 0 && _kind == crew_state_kind) {
+        read_crew_state(_sequence, _size);
+        return;
+    }
+    if (reply_count > 0 && _kind == crew_order_kind && _size == crew_order_size) {
+        read_crew_order(_sequence);
+        return;
+    }
+    if (_size != packet_length) return;
+
     if (_kind == ping_packet) {
         send_probe(pong_packet, _sequence);
     } else if (_kind == pong_packet && _sequence == pending_sequence) {

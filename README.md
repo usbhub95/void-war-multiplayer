@@ -1,6 +1,6 @@
 # Void War co-op connection probe
 
-This Windows Steam mod tests whether two copies of Void War can exchange messages using the game's bundled Steam P2P extension. Both players run the probe from the title screen. Shared ship controls are the next milestone after a successful remote test.
+This Windows Steam mod tests whether two copies of Void War can exchange messages using the game's bundled Steam P2P extension. Both players connect from the title screen. The experimental crew test keeps that connection open while the host starts a fight.
 
 ## Build
 
@@ -30,3 +30,13 @@ Use two Windows PCs on separate internet connections, signed into separate Steam
 5. To check protocol mismatch, build a test copy from a scratch checkout with `probe_version` changed in `probe/Create.gml`. Connect it to the standard probe. Neither side should report a successful connection. At least one panel should report **Peer has a different build or probe version.** Restore both PCs to the standard probe before retesting.
 
 Record the result on both PCs and the status shown if either fails. Direct IP is the planned fallback if the Steam probe fails the remote test. Steam's bundled P2P API is [deprecated by Valve](https://partner.steamgames.com/doc/api/ISteamNetworking).
+
+## Shared crew playtest
+
+1. Install this build on both PCs. Open the panel with **F8** and use **F7** to set one player to **Host** and the other to **Guest** before entering peer IDs. Wait for both reply counters to increase.
+2. The guest stays on the title screen with the panel open. The host starts a run, enters combat, selects one living crew member on their own ship, and presses **F6**. Both panels should show the same numbered room map.
+3. On the guest PC, use **Left/Right** to choose a room and **Enter** to give the order. The host's game should move the selected crew member. Verify both panels report the same destination and arrival. If combat is paused, unpause it on the host to see movement.
+4. Redirect the same crew member with the host's normal controls, then send another guest order. If both issue an order, the last valid order processed on the host should determine the destination. Check both panels agree where the crew member arrives.
+5. Press **F10** on the guest. Verify the host can still move the crew normally after the session ends.
+
+The guest uses the panel for this milestone. The numbered map shows up to 24 rooms from the host's ship. The host validates reachability at the time of the order. This build uses probe protocol 2, so both PCs need the same revision.

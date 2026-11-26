@@ -40,9 +40,12 @@ foreach (var (eventName, filename) in new[] {
     ("Draw_64", "DrawGui.gml"),
     ("CleanUp_0", "Cleanup.gml")
 }) {
-    code.QueueReplace($"gml_Object_{objectName}_{eventName}", File.ReadAllText(Path.Combine(source, filename)));
+    var gml = File.ReadAllText(Path.Combine(source, filename));
+    if (eventName == "Create_0")
+        gml += "\n" + File.ReadAllText(Path.Combine(source, "CrewTest.gml"));
+    code.QueueReplace($"gml_Object_{objectName}_{eventName}", gml);
 }
-code.QueueReplace(roomEntry, $"instance_create_depth(0, 0, 100, {objectName});");
+code.QueueReplace(roomEntry, $"if (!instance_exists({objectName})) instance_create_depth(0, 0, 100, {objectName});");
 code.Import();
 var create = Data.Code.ByName($"gml_Object_{objectName}_Create_0");
 foreach (var name in steamFunctions)
@@ -54,6 +57,6 @@ foreach (var name in steamFunctions)
 
 var probe = Data.GameObjects.ByName(objectName);
 probe.Visible = true;
-probe.Persistent = false;
+probe.Persistent = true;
 room.CreationCodeId = Data.Code.ByName(roomEntry);
 Console.WriteLine("Compiled the probe and linked it to rmMainMenu creation code.");
