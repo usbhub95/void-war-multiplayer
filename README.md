@@ -52,3 +52,34 @@ The guest uses the panel for this milestone. The numbered map shows up to 24 roo
 5. Press **F5** on the guest to return to the numbered panel and check that the connection survives. Reopen the ship view and press **F10** there. The guest should return to the title screen and the host should retain normal movement controls.
 
 If the ship view fails at a step, record the starter ship, which room was clicked, and what the host and guest displayed. Follow the numbered-panel test to check whether peer connectivity and the host movement path still work.
+
+## Native crew input experiment
+
+This one-PC test uses an optional diagnostic build. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
+
+To build the diagnostic from the vanilla file for build `26906873` or the pinned protocol 5 probe, run UndertaleModTool CLI 0.9.2.0 from the repository. The example uses the protocol 5 probe as input.
+
+```powershell
+& 'C:\Tools\UTMT\UndertaleModCli.exe' load .\build\data.win `
+    --scripts .\experiments\NativeCrewInput.csx --output .\build\native-input.win
+```
+
+With the game closed, copy `build\native-input.win` beside the installed `data.win` as `void-war-native-input.win`, then launch it through Steam. Adjust the paths for your installation. The sidecar needs to be in the game directory so the runner can load its bundled fonts. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
+
+```powershell
+$diagnostic = 'D:\SteamLibrary\steamapps\common\Void War\void-war-native-input.win'
+$log = Join-Path (Get-Location) 'build\native-input-playtest.log'
+& 'C:\Program Files (x86)\Steam\steam.exe' -applaunch 2853590 -game "$diagnostic" -output "$log"
+```
+
+Check the game log for `[Native crew input] ready` after launch. Each accepted click should produce one order line with the selected crew member and destination room. The crew should move as in normal play.
+
+| Click | Expected order line |
+| --- | --- |
+| Right-click another reachable room with precision mode off | `room` and `slot=0` |
+| Right-click a vacant tile with precision mode on | `precision` and the clicked slot |
+| Right-click a tile occupied by another allied crew member with precision mode on | `occupied` and the clicked slot. The game applies its normal fallback. |
+| With precision mode off, right-click the selected crew member's current room while its mannable console slot is vacant and the crew member is on another slot | `console` and the console slot |
+| Right-click with no selection or observe idle combat without giving orders | No order lines |
+
+Close the game and filter the log with `Select-String -LiteralPath $log -SimpleMatch '[Native crew input]'`. Report the matching order lines and whether each move behaved as expected. A normal Steam launch uses the installed `data.win`.
