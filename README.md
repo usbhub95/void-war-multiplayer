@@ -6,17 +6,16 @@ For project status, architecture, and verification history, see the [development
 
 ## Build
 
-Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). Extract the CLI and run these commands from the repository in PowerShell.
+Use Windows Steam build `26906873`. Run these commands from the repository in PowerShell.
 
 ```powershell
 .\scripts\Setup-Assets.ps1
-$compiler = Read-Host 'Path to UndertaleModCli.exe'
-.\scripts\New-Build.ps1 -UndertaleModCli $compiler
+.\scripts\New-Build.ps1
 ```
 
-Run setup once per checkout. It verifies the installed vanilla `data.win` and copies it to the Git-ignored `assets\data.win`. Future builds read that copy and write `build\data.win`. Both PCs should use the same source revision and CLI version and compare the printed build hashes.
+Run setup once per checkout. It verifies and caches the vanilla `data.win` in `assets\data.win`. It also downloads the pinned Windows UndertaleModCli release and verifies its SHA-256 before extracting it into `assets\undertalemodcli\0.9.2.0`. Both paths are Git-ignored. Setup needs internet access for the first CLI download. Later builds use the cached files offline and write `build\data.win`. Both PCs should use the same source revision and compare the printed build hashes. [Official CLI release](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0)
 
-Setup discovers Void War from Steam. Use `-GameDirectory` to point setup at the installed game folder manually, or `-SteamDirectory` to specify the Steam client folder. If the installed data has been replaced, use Steam's **Verify integrity of game files** before the first setup and check for the pinned vanilla SHA-256 `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. If you already have the pinned vanilla file, place it at `assets\data.win` and run setup to verify it. To build directly from a vanilla installation, pass `-GameDirectory` to the build script.
+Setup discovers Void War from Steam. Use `-GameDirectory` to point setup at the installed game folder manually, or `-SteamDirectory` to specify the Steam client folder. If the installed data has been replaced, use Steam's **Verify integrity of game files** before the first setup and check for the pinned vanilla SHA-256 `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. If you already have the pinned vanilla file, place it at `assets\data.win` and run setup to verify it. To build directly from a vanilla installation, pass `-GameDirectory` to the build script. To use a manually installed CLI, pass `-UndertaleModCli` with the executable path.
 
 ### Clean generated files
 

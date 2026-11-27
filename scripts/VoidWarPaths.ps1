@@ -62,3 +62,14 @@ function Get-VerifiedVanillaData([string]$Path) {
     }
     return $file
 }
+
+function Get-UndertaleModCliPackage([string]$ProjectRoot) {
+    $version = '0.9.2.0'
+    $directory = Join-Path $ProjectRoot "assets\undertalemodcli\$version"
+    [pscustomobject]@{
+        Directory = $directory
+        Executable = Join-Path $directory 'UndertaleModCli.exe'
+        ArchiveUri = "https://github.com/UnderminersTeam/UndertaleModTool/releases/download/$version/UTMT_CLI_v$version-Windows.zip"
+        ArchiveHash = 'E7573E45D107BE34F81F955C6E4AFC3C7C8F2628E5A6F307A871E3825B3DFB40'
+    }
+}

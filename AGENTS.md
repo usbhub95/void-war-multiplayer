@@ -5,7 +5,7 @@
 - Store local copies of original assets in the Git-ignored `assets/` directory.
 
 ## Build workflow
-- Use `scripts/Setup-Assets.ps1` to prepare the local vanilla `assets/data.win`, `scripts/New-Build.ps1` to generate `build/data.win`, and `scripts/Start-VoidWar.ps1` to launch it.
+- Use `scripts/Setup-Assets.ps1` to prepare the local vanilla `assets/data.win` and pinned CLI cache under `assets/`, `scripts/New-Build.ps1` to generate `build/data.win`, and `scripts/Start-VoidWar.ps1` to launch it.
 - Reserve `build/` for generated outputs and temporary logs. Run cleanup separately using `scripts/Clear-Build.ps1`.
 
 ## Project documentation

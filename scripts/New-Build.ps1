@@ -2,7 +2,6 @@
 param(
     [string]$GameDirectory,
 
-    [Parameter(Mandatory)]
     [string]$UndertaleModCli,
 
     [switch]$NativeInput
@@ -21,6 +20,14 @@ if (!(Test-Path -LiteralPath $inputPath -PathType Leaf)) {
     throw 'Run scripts/Setup-Assets.ps1 to prepare assets/data.win.'
 }
 $inputFile = Get-VerifiedVanillaData $inputPath
+if (!$UndertaleModCli) {
+    $package = Get-UndertaleModCliPackage $projectRoot
+    $UndertaleModCli = $package.Executable
+    if (!(Test-Path -LiteralPath $UndertaleModCli -PathType Leaf) -or
+        !(Test-Path -LiteralPath (Join-Path $package.Directory 'UndertaleModLib.dll') -PathType Leaf)) {
+        throw 'Run scripts/Setup-Assets.ps1 to prepare the pinned UndertaleModCli.'
+    }
+}
 $compiler = Get-Item -LiteralPath $UndertaleModCli
 if ($compiler.PSIsContainer) {
     throw '-UndertaleModCli must point to the executable.'
