@@ -328,6 +328,31 @@ read_crew_state = function(_snapshot, _size) {
 };
 
 
+move_guest_crew_to_occupied_tile = function(_crew, _cell, _tile) {
+    var _occupant = cell_get_crew_at_slot(_cell, _tile, _crew.allied);
+    if (!instance_exists(_occupant) || _occupant.allied != _crew.allied
+            || _occupant.currentCellID != _cell || _occupant.currentCellSlot != _tile
+            || crew_is_dead(_occupant) || (!_occupant.enableFriendlyCrewAI && !crew_has_reached_destination(_occupant))
+            || _occupant.moveSpeed <= 0 || crew_check_keyword(_occupant, oKWStunned)
+            || crew_check_keyword(_occupant, oKWSessile) || crew_check_keyword(_occupant, oKWImmobilized)) return;
+
+    var _origin = _crew.currentCellID;
+    var _origin_tile = _crew.currentCellSlot;
+    if (!instance_exists(_origin) || _origin_tile < 1 || _origin_tile > cell_get_slot_count(_origin)
+            || cell_get_crew_at_slot(_origin, _origin_tile, _crew.allied) != _crew) return;
+
+    // Reserve the requested tile before finding a new destination for its occupant.
+    cell_clear_slot(_occupant);
+    cell_clear_slot(_crew);
+    if (slot_reserve(_crew, _tile, _cell)) {
+        crew_move_set_target_nearest_free_cell_destination(_occupant);
+        if (_occupant.currentCellSlot > 0) return;
+        cell_clear_slot(_crew);
+    }
+    slot_reserve(_occupant, _tile, _cell);
+    slot_reserve(_crew, _origin_tile, _origin);
+};
+
 read_crew_order = function(_order) {
     if (!crew_host_mode || crew_token == 0 || _order <= crew_ack) return;
 
@@ -350,7 +375,7 @@ read_crew_order = function(_order) {
             || !objects_on_same_hull(_crew, _cell) || !crew_checkDestinationIsReachable(_crew, _cell)) return;
 
     if (_tile == 0) {
-        if (_crew.currentCellID != _cell) crew_move_set_target(_crew, _cell);
+        if (_crew.currentCellID != _cell) crew_choose_move_slot(_crew, _cell, 1, 0);
         crew_accepted = _crew.currentCellID == _cell;
         return;
     }
@@ -361,11 +386,10 @@ read_crew_order = function(_order) {
     }
     if (slot_is_vacant(_cell, _tile, _crew.allied)) {
         crew_move_set_target_slot(_crew, _cell, _tile, 1);
-        crew_accepted = _crew.currentCellID == _cell && _crew.currentCellSlot == _tile;
     } else {
-        crew_move_set_target_and_push_crew_nearby_slot(_crew, _cell);
-        crew_accepted = _crew.currentCellID == _cell;
+        move_guest_crew_to_occupied_tile(_crew, _cell, _tile);
     }
+    crew_accepted = _crew.currentCellID == _cell && _crew.currentCellSlot == _tile;
 };
 
 queue_crew_order = function(_room, _tile) {
