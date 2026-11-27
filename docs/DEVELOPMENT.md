@@ -90,7 +90,7 @@ New-Item -ItemType Directory -Path .\temp -Force | Out-Null
 .\scripts\Start-VoidWar.ps1 -GameFile .\temp\selection-fixture.win -LogOutput
 ```
 
-Leave mouse buttons and modifiers released during startup. The fixture runs and exits automatically. Look for `[Native guest selection fixture] PASS click, clear, drag, gated tile order` and check for any `FAIL` markers from the same run. The original scratch prototypes, decompiled extracts, fixture binaries, and runner logs were preserved locally in Git-ignored `temp/native-selection-inspection/`.
+Leave mouse buttons and modifiers released during startup. The fixture runs and exits automatically. Look for `[Native guest selection fixture] PASS click, clear, drag, gated tile order` and check for any `FAIL` markers from the same run. The scratch prototypes, decompiled extracts, fixture binaries, and runner logs in Git-ignored `temp/native-selection-inspection/` are disposable. The tracked fixture and these notes preserve the reproducible test and its findings.
 
 The proposed live experiment will run the isolated routines against the existing guest view and route selection into the current tile-order handler. Keep the current build as the default. Before integration, agree on an opt-in two-PC playtest covering click, drag, Shift and Ctrl selection, clearing, layout and window changes, and selection reset on a new share or disconnect. The native right-click branch still depends on additional live room and crew state.
 

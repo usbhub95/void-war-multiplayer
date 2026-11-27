@@ -8,7 +8,7 @@
 - Use `scripts/New-Build.ps1` to read the installed vanilla `data.win` in place and generate a single `build/data.win`.
 - Reserve `build/` exclusively for the generated `data.win` and associated build logs. Do not use it for intermediate source, vanilla copies, experiments or temporary working files.
 - Use Git-ignored `temp/` for disposable working files and `tests/` for reusable experiments.
-- Run build cleanup separately using `scripts/Clear-Build.ps1`.
+- Run cleanup separately using `scripts/Clear-TemporaryFiles.ps1`.
 
 ## Project documentation
 - Maintain [DEVELOPMENT.md](docs/DEVELOPMENT.md) as the durable development record, including testing results and the next checkpoint. Read it before resuming work.

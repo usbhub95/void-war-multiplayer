@@ -19,11 +19,11 @@ Setup discovers Void War from Steam. Use `-GameDirectory` to point setup at the 
 
 ### Clean generated files
 
-Use [Clear-Build.ps1](scripts/Clear-Build.ps1) when you want to clear `build/`, including any logs saved there.
+Use [Clear-TemporaryFiles.ps1](scripts/Clear-TemporaryFiles.ps1) to clear `temp/` and remove logs and other temporary files from `build/`. The script preserves `build\data.win`.
 
 ```powershell
-.\scripts\Clear-Build.ps1 -WhatIf
-.\scripts\Clear-Build.ps1
+.\scripts\Clear-TemporaryFiles.ps1 -WhatIf
+.\scripts\Clear-TemporaryFiles.ps1
 ```
 
 The first command previews the cleanup. The regular build replaces `build\data.win` after compilation succeeds, so routine builds can run with the previous output in place.
