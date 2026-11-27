@@ -53,6 +53,18 @@ The guest uses the panel for this milestone. The numbered map shows up to 24 roo
 
 If the ship view fails at a step, record the starter ship, which room was clicked, and what the host and guest displayed. Follow the numbered-panel test to check whether peer connectivity and the host movement path still work.
 
+## Empire cruiser guest view playtest
+
+Build from the pinned vanilla data using the [build steps](#build). Use the same build on both PCs. This view uses native hull, border, and room sprites for the starter ship **Triumph of Heaven**.
+
+1. Follow the first two steps of the [shared crew playtest](#shared-crew-playtest) on **Triumph of Heaven**. Confirm the host can select and move crew normally before sharing with **F6**.
+2. On the guest, press **F5** to enter the layout view and **F4** to switch to the native starter view. Check that the hull, border, and rooms line up with the host and that the crew appears at the host's tile.
+3. Select the crew on the guest and right-click vacant tiles in different room shapes. Include a second tile in the same room. Compare where the crew arrives on both PCs. Have the host redirect one order and check that the last order processed by the host wins.
+4. Move the host's shared crew into another room and press **F6** again. The native starter view should still line up once the new layout arrives. Press **F4** to switch back and verify that the layout view still accepts an order.
+5. Press **F5** to return to the panel. Reopen the view, press **F4**, then press **F10**. The guest should return to the title screen and the host should retain normal crew controls.
+
+If you try another ship, **F4** should report that the native view is unavailable and leave the layout view usable. Report whether the native view opened, how the crew and rooms lined up, and any wrong tile or fallback.
+
 ## Native crew input experiment
 
 This one-PC test uses an optional diagnostic build. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.

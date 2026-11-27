@@ -8,9 +8,13 @@ if (room == guest_view_room) {
         room_goto(rmMainMenu);
         exit;
     }
+    if (window_has_focus() && keyboard_check_pressed(vk_f4)) {
+        guest_native_requested = !guest_native_requested;
+    }
 } else if (room == rmMainMenu && !crew_host_mode && panel_open && !entry_open
         && peer_id != 0 && crew_token != 0 && window_has_focus() && keyboard_check_pressed(vk_f5)) {
     guest_selected = false;
+    guest_native_requested = false;
     room_goto(guest_view_room);
     exit;
 }

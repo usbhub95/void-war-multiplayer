@@ -56,6 +56,28 @@ viewRoom.Layers.Add(new UndertaleRoom.Layer
 });
 Data.Rooms.Add(viewRoom);
 
+// Read the starter layout from the installed game data. Use the sprites assigned
+// by the cell Create events and leave the original room and objects untouched.
+var starter = Data.Rooms.ByName("rmStart_EMCruiserA_gunBoarding")
+    ?? throw new InvalidOperationException("The Empire cruiser starter room is missing.");
+var cellSprites = new System.Collections.Generic.Dictionary<string, string>
+{
+    ["oCellSingle"] = "spr_box_ltGray",
+    ["oCellWide"] = "spr_boxWide_ltGray",
+    ["oCellTall"] = "spr_boxTall_ltGray",
+    ["oCellLarge"] = "spr_boxLarge_ltGray"
+};
+var starterCells = starter.GameObjects.Where(placed => cellSprites.ContainsKey(placed.ObjectDefinition.Name.Content)).ToArray();
+var minX = starterCells.Min(placed => placed.X);
+var minY = starterCells.Min(placed => placed.Y);
+var hull = starter.GameObjects.Single(placed => placed.ObjectDefinition.Name.Content == "oHullPlayerEMCruiserA");
+var border = starter.GameObjects.Single(placed => placed.ObjectDefinition.Name.Content == "oShipBorderPlayerEMCruiserA");
+var cells = starterCells.Select(placed =>
+    $"[{placed.X - minX}, {placed.Y - minY}, {cellSprites[placed.ObjectDefinition.Name.Content]}]");
+var nativeLayout = $"guest_native_hull_name = \"{hull.ObjectDefinition.Sprite.Name.Content}\";\n"
+    + $"guest_native_border = [{border.ObjectDefinition.Sprite.Name.Content}, {border.X - hull.X}, {border.Y - hull.Y}];\n"
+    + $"guest_native_cells = [{string.Join(", ", cells)}];\n";
+
 var source = Path.GetDirectoryName(ScriptPath);
 var code = new CodeImportGroup(Data);
 foreach (var (eventName, filename) in new[] {
@@ -67,7 +89,8 @@ foreach (var (eventName, filename) in new[] {
     var gml = File.ReadAllText(Path.Combine(source, filename));
     if (eventName == "Create_0")
         gml += "\n" + File.ReadAllText(Path.Combine(source, "CrewTest.gml"))
-            + "\n" + File.ReadAllText(Path.Combine(source, "GuestView.gml"));
+            + "\n" + File.ReadAllText(Path.Combine(source, "GuestView.gml"))
+            + "\n" + nativeLayout + File.ReadAllText(Path.Combine(source, "NativeGuestShip.gml"));
     code.QueueReplace($"gml_Object_{objectName}_{eventName}", gml);
 }
 code.QueueReplace(roomEntry, $"if (!instance_exists({objectName})) instance_create_depth(0, 0, 100, {objectName});");

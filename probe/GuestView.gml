@@ -99,6 +99,14 @@ layout_guest_view = function() {
         _max_x = max(_max_x, _cell[0] + _cell[2]);
         _max_y = max(_max_y, _cell[1] + _cell[3]);
     }
+    var _native = guest_native_requested && array_length(guest_native_sprites) > 0;
+    if (_native) {
+        // The matching starter hull has a top-left sprite origin and is flipped horizontally.
+        _min_x = min(_min_x, guest_hull_pose[0] - sprite_get_width(guest_hull));
+        _min_y = min(_min_y, guest_hull_pose[1]);
+        _max_x = max(_max_x, guest_hull_pose[0]);
+        _max_y = max(_max_y, guest_hull_pose[1] + sprite_get_height(guest_hull));
+    }
     var _width = max(1, display_get_gui_width() - 96);
     var _height = max(1, display_get_gui_height() - 176);
     var _scale = min(_width / max(1, _max_x - _min_x), _height / max(1, _max_y - _min_y), 2);
@@ -107,6 +115,7 @@ layout_guest_view = function() {
         100 + (_height - (_max_y - _min_y) * _scale) / 2 - _min_y * _scale,
         _scale
     ];
+    return _native;
 };
 
 read_guest_click = function(_gx, _gy, _left_pressed, _right_pressed) {
@@ -155,7 +164,15 @@ draw_guest_ship = function() {
         + "\n" + (crew_arrived ? "Arrived" : "Moving")
         + "   Room: " + string(crew_destination) + "   Tile: " + string(crew_target_tile) + "   " + crew_notice);
 
-    layout_guest_view();
+    var _native = layout_guest_view();
+    var _mode = "F4  Native starter view";
+    if (_native) {
+        _mode = "F4  Layout view";
+    } else if (guest_native_requested) {
+        _mode = "Native view unavailable for this layout";
+    }
+    draw_text(24, 80, _mode);
+
     var _x = guest_layout[0];
     var _y = guest_layout[1];
     var _s = guest_layout[2];
@@ -164,22 +181,33 @@ draw_guest_ship = function() {
             _y + guest_hull_pose[1] * _s, _s * guest_hull_pose[2], _s * guest_hull_pose[3],
             0, c_white, 1);
     }
+    if (_native) {
+        draw_sprite_ext(guest_native_border[0], 0,
+            _x + (guest_hull_pose[0] + guest_native_border[1]) * _s,
+            _y + (guest_hull_pose[1] + guest_native_border[2]) * _s,
+            -_s, _s, 0, c_white, 1);
+    }
     for (var _i = 0; _i < array_length(crew_rooms); _i += 1) {
         var _cell = crew_rooms[_i];
         var _left = _x + _cell[0] * _s;
         var _top = _y + _cell[1] * _s;
         var _right = _left + _cell[2] * _s;
         var _bottom = _top + _cell[3] * _s;
-        draw_set_alpha(sprite_exists(guest_hull) ? 0.40 : 1);
-        draw_set_color(make_color_rgb(42, 60, 72));
-        draw_rectangle(_left, _top, _right, _bottom, false);
-        draw_set_alpha(1);
-        draw_set_color(_i + 1 == crew_destination ? c_yellow : c_gray);
-        draw_rectangle(_left, _top, _right, _bottom, true);
+        if (_native) {
+            draw_sprite_ext(guest_native_sprites[_i], 0, _left, _top, _s, _s, 0, c_white, 1);
+        } else {
+            draw_set_alpha(sprite_exists(guest_hull) ? 0.40 : 1);
+            draw_set_color(make_color_rgb(42, 60, 72));
+            draw_rectangle(_left, _top, _right, _bottom, false);
+            draw_set_alpha(1);
+            draw_set_color(_i + 1 == crew_destination ? c_yellow : c_gray);
+            draw_rectangle(_left, _top, _right, _bottom, true);
+        }
         var _tiles = _cell[4];
         for (var _j = 0; _j < array_length(_tiles); _j += 1) {
             var _tile = _tiles[_j];
             var _targeted = _i + 1 == crew_destination && _j + 1 == crew_target_tile;
+            if (_native && !_targeted) continue;
             draw_set_color(_targeted ? c_yellow : c_silver);
             draw_circle(_x + _tile[0] * _s, _y + _tile[1] * _s, _targeted ? 7 : 3, true);
         }

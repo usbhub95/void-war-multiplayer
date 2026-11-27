@@ -21,6 +21,7 @@ clear_crew_test = function() {
     shared_origin_x = 0;
     shared_origin_y = 0;
     crew_rooms = [];
+    guest_native_sprites = [];
     crew_token = 0;
     crew_here = 0;
     crew_destination = 0;
@@ -162,6 +163,7 @@ begin_guest_epoch = function(_epoch) {
     crew_layout_epoch = 0;
     crew_token = 0;
     crew_rooms = [];
+    guest_native_sprites = [];
     guest_selected = false;
     crew_pending = 0;
     crew_choice = 1;
@@ -212,6 +214,7 @@ read_crew_layout = function(_epoch, _size) {
     guest_hull = _hull;
     guest_portrait = _portrait;
     guest_hull_pose = [_hx, _hy, clamp(_xs, -4, 4), clamp(_ys, -4, 4)];
+    guest_native_sprites = match_native_guest_rooms(_rooms, _hull, _xs, _ys);
     send_probe(crew_layout_ack_kind, _epoch);
 };
 
