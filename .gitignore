@@ -4,3 +4,4 @@
 /assets/
 *.win
 data.win.*
+/temp/

@@ -6,7 +6,7 @@
 
 ## Build workflow
 - Use `scripts/Setup-Assets.ps1` to prepare the local vanilla `assets/data.win` and pinned CLI cache under `assets/`, `scripts/New-Build.ps1` to generate `build/data.win`, and `scripts/Start-VoidWar.ps1` to launch it.
-- Reserve `build/` for generated outputs and temporary logs. Run cleanup separately using `scripts/Clear-Build.ps1`.
+- Reserve `build/` for build outputs and launcher logs. Use the Git-ignored `temp/` directory for disposable working files. Run build cleanup separately using `scripts/Clear-Build.ps1`.
 
 ## Project documentation
 - Maintain [DEVELOPMENT.md](docs/DEVELOPMENT.md) as the durable development record, including testing results and the next checkpoint. Read it before resuming work.
