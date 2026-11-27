@@ -25,7 +25,7 @@ References for build-specific work include the [Void War developer FAQ](https://
 | Shared crew | Commit `eb8c0fc` implements the milestone. The rebuilt data reopened with a persistent probe and direct native movement, reachability, arrival, and Steam calls. A temporary Steam runner fixture passed synthetic snapshot, arrival, acknowledgement, stale and malformed packet, duplicate-order, and disconnect cleanup checks. A live two-PC playtest confirmed guest movement, the most recent processed order taking priority across host and guest, and normal host movement after guest disconnect. | Shared-control checkpoint passed. Exact room-map parity and arrival display were not separately reported. |
 | Guest ship view | UndertaleModTool reopened the compiled data and verified the dedicated empty room, persistent probe, and direct native hooks. A temporary Steam runner fixture passed room transition, native sprite resolution, truncated-packet rejection, selection and click-to-room mapping, redirecting with a newer click, and the GUI draw call. The user reported that the live test worked and that the game picked the tile automatically within the clicked room. | Live room-level control passed on protocol 3. |
 | Precision tile targeting | UndertaleModTool verified direct native slot, vacancy, movement, and occupied-tile fallback calls. A temporary Steam fixture passed layout encoding and decoding, truncated layout rejection, acknowledgement retry, same-room click redirection, and stale-layout retirement. The user reported that all live protocol 4 playtest checks worked as expected. | Passed, including same-room precision movement and occupied-tile behavior. |
-| Native crew presentation | Two builds from pinned vanilla data matched. A temporary Steam fixture drew the native crew sprite and passed pose round-trip, truncated sprite rejection, frame advance, smoothing, selection, pause, and large-correction checks. | The user reported that the live guest view worked overall. Guest crew animations visibly jittered. |
+| Native crew presentation | Two builds from pinned vanilla data matched. A temporary Steam fixture drew the native crew sprite and passed pose round-trip, truncated sprite rejection, frame advance, smoothing, selection, pause, and large-correction checks. | The first live guest view worked overall. Guest crew animations visibly jittered in that test. |
 
 The earlier protocol 5 build with animated crew is archived locally as `build/data.win`, verified as `5ECFD25C0194CADB5145D57B66FC73088970376149ED022764709EFFCAC9CB9E`. Compare hashes for builds produced from the same revision, tool version, and vanilla input.
 
@@ -39,7 +39,7 @@ The runtime fixtures were temporary. For future changes, build from the pinned v
 
 ## Resume here
 
-The [protocol 5 guest ship playtest](README.md#guest-ship-playtest) worked overall, with guest animation jitter reported. Each accepted crew update resets the guest to the host's animation frame and restarts the local animation clock. A timing example at 12 animation frames per second showed that uneven arrivals can rewind or skip frames. The cause of the live jitter remains unverified. Animation tuning is deferred.
+The first [protocol 5 guest ship playtest](README.md#guest-ship-playtest) worked overall, with guest animation jitter reported. In the later Empire cruiser playtest, the user reported that animations looked normal with the game focused and suspected a background application frame limiter. Each accepted crew update also resets the guest to the host's animation frame. A synthetic timing example showed that uneven arrivals can rewind or skip frames. The earlier jitter's cause remains unverified. Animation tuning is deferred.
 
 ### Native input experiment
 
@@ -55,7 +55,7 @@ The optional **F4** mode in the guest room uses the bundled hull, border, and ro
 
 Two builds from pinned vanilla matched SHA-256 `18DA6C00022F4365D7983D96BFCA7196DEF61C23FC47E5A81795FF98EBD0838E` for `build/playtest/void-war-native-guest-scene.win`. UndertaleModTool reopened the build and confirmed direct sprite calls, an empty guest room, and identical disassembly for the inspected native hull, cell, cursor, and room initialization code. A temporary Steam fixture matched all 20 room origins in reversed room order, rejected mismatched bounds, tiles, duplicates, hull and orientation, and decoded synthetic layout and crew packets. It entered the guest room, ran both draw paths, checked click-to-tile mapping, cleared the match on a new share, and returned to the title screen. The installed `data.win` matched its pre-test hash.
 
-The [Empire cruiser guest view playtest](README.md#empire-cruiser-guest-view-playtest) is the next checkpoint. Verify that the real host layout matches, compare the guest's room and crew alignment, and exercise native single-player movement and existing two-PC controls.
+The user reported that the two-PC [Empire cruiser guest view playtest](README.md#empire-cruiser-guest-view-playtest) worked as expected. The next checkpoint is to scope native guest crew input using the click paths verified in the one-PC experiment.
 
 ## Long-term direction
 
