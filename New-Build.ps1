@@ -29,9 +29,9 @@ if ($actualHash -ne $expectedHash) {
 
 $source = Join-Path $PSScriptRoot 'src'
 $patchScript = if ($NativeInput) {
-    Join-Path $source 'experiments\NativeCrewInput.csx'
+    Join-Path $source 'NativeCrewInput.csx'
 } else {
-    Join-Path $source 'ApplyProbe.csx'
+    Join-Path $source 'VoidWarMultiplayer.csx'
 }
 
 $buildDirectory = Join-Path $PSScriptRoot 'build'
