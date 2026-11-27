@@ -8,7 +8,7 @@ The current target is the full Windows Steam game, build `26906873`, with a copy
 
 ## Current checkpoint
 
-The occupied-tile guest order fix passed its two-PC playtest. The [native guest selection feasibility test](#native-guest-selection-feasibility) passed its synthetic runner checks. The next step is an opt-in two-PC test with real guest mouse input.
+The occupied-tile guest order fix passed its two-PC playtest. The opt-in native guest selection build is ready for the [two-PC playtest](../README.md#native-guest-selection-playtest). Live mouse gestures, layout changes, and share/disconnect behavior are pending.
 
 ## Architecture and game integration
 
@@ -92,7 +92,11 @@ New-Item -ItemType Directory -Path .\temp -Force | Out-Null
 
 Leave mouse buttons and modifiers released during startup. The fixture runs and exits automatically. Look for `[Native guest selection fixture] PASS click, clear, drag, gated tile order` and check for any `FAIL` markers from the same run. The scratch prototypes, decompiled extracts, fixture binaries, and runner logs in Git-ignored `temp/native-selection-inspection/` are disposable. The tracked fixture and these notes preserve the reproducible test and its findings.
 
-The proposed live experiment will run the isolated routines against the existing guest view and route selection into the current tile-order handler. Keep the current build as the default. Before integration, agree on an opt-in two-PC playtest covering click, drag, Shift and Ctrl selection, clearing, layout and window changes, and selection reset on a new share or disconnect. The native right-click branch still depends on additional live room and crew state.
+### Native guest selection playtest build
+
+`New-Build.ps1 -NativeGuestSelection` applies [the guest selection experiment](../tests/NativeGuestSelection.csx) after the standard co-op patch. The [selection source helper](../tests/NativeSelectionSource.csx) is shared with the feasibility fixture. The experiment uses guest-room instances and the crew's rendered GUI position and scale for the native hitbox. The guest cursor defers the current right-click until End Step, after incoming packets and native selection have been processed, then forwards it to the existing tile-order handler. Switching shares clears selection and any drag. Leaving the room restores the original click handler. Both numbered-panel input and protocol 5 are unchanged. [GameMaker event order](https://manual.gamemaker.io/lts/en/The_Asset_Editors/Object_Properties/Event_Order.htm)
+
+Two selection builds matched SHA-256 `E0639E339B8F05C930D126D0A32A916BB8DDC3F6F1AF4FFA292E9D03187AE77F`. UndertaleModTool reopened the build and confirmed the guest room hook, isolated object definitions, and direct calls to the selection routines. Default co-op, `-NativeInput`, and the feasibility fixture reproduced their previous hashes. An isolated Steam integration fixture exercised the real guest-room setup and End Step adapter with synthetic input and no network traffic. It confirmed drag selection, deferred right-click capture and exact tile queueing, drag cancellation after a GUI resize, rejection of stale selection on a new share, and restoration of the original click method on leaving. Real mouse gestures and two-peer behavior still need the playtest.
 
 ## Long-term direction
 

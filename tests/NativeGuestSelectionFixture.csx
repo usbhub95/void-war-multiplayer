@@ -1,31 +1,22 @@
+#load "NativeSelectionSource.csx"
+
 using System;
-using System.Text.RegularExpressions;
-using Underanalyzer.Decompiler;
+using System.Collections.Generic;
 using UndertaleModLib;
 using UndertaleModLib.Compiler;
-using UndertaleModLib.Decompiler;
 using UndertaleModLib.Models;
 
-// Extract only the selection and clearing routines from the local game data.
-var nativeEntry = Data.Code.ByName("gml_GlobalScript_scrCursorCrewSelection")
-    ?? throw new InvalidOperationException("Expected the native crew selection script.");
 if (Data.Code.ByName("gml_Object_oVoidWarConnectionProbe_Create_0") == null)
     throw new InvalidOperationException("Build the standard co-op data before applying this fixture.");
-var native = new DecompileContext(new GlobalDecompileContext(Data), nativeEntry).DecompileToString();
-var selectEnd = native.IndexOf("function crewPortraitIsDragged()", StringComparison.Ordinal);
-var clearStart = native.IndexOf("function deselect_all_crew()", StringComparison.Ordinal);
-var clearEnd = native.IndexOf("function select_crew(", StringComparison.Ordinal);
-if (!native.StartsWith("function scrCursorCrewSelection()", StringComparison.Ordinal)
-    || selectEnd < 0 || clearStart <= selectEnd || clearEnd <= clearStart)
-    throw new InvalidOperationException("Unexpected structure in the native crew selection script.");
 
-var select = native[..selectEnd];
-var clear = native[clearStart..clearEnd];
-var isolated = Regex.Replace(select + clear, @"\boCrew\b", "oVWFixtureCrew");
-isolated = Regex.Replace(isolated, @"\boUICursor\b", "oVWFixtureCursor");
-isolated = Regex.Replace(isolated, @"\boCrewPortrait\b", "oVWFixturePortrait");
-isolated = Regex.Replace(isolated, @"\bscrCursorCrewSelection\b", "vw_fixture_native_select");
-isolated = Regex.Replace(isolated, @"\bdeselect_all_crew\b", "vw_fixture_native_clear");
+var isolated = CompileSelectionSource(Data, new Dictionary<string, string>
+{
+    ["oCrew"] = "oVWFixtureCrew",
+    ["oUICursor"] = "oVWFixtureCursor",
+    ["oCrewPortrait"] = "oVWFixturePortrait",
+    ["scrCursorCrewSelection"] = "vw_fixture_native_select",
+    ["deselect_all_crew"] = "vw_fixture_native_clear"
+});
 var code = new CodeImportGroup(Data);
 var mask = new UndertaleGameObject { Name = Data.Strings.MakeString("oVWFixtureMask"),
     Sprite = Data.GameObjects.ByName("oCrewCollision").Sprite, Visible = false };

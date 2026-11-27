@@ -1,10 +1,14 @@
-[CmdletBinding()]
+[CmdletBinding(DefaultParameterSetName = 'Coop')]
 param(
     [string]$GameDirectory,
 
     [string]$UndertaleModCli,
 
-    [switch]$NativeInput
+    [Parameter(ParameterSetName = 'NativeInput')]
+    [switch]$NativeInput,
+
+    [Parameter(ParameterSetName = 'NativeGuestSelection')]
+    [switch]$NativeGuestSelection
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,6 +43,11 @@ $patchScript = if ($NativeInput) {
     Join-Path $projectRoot 'src\VoidWarMultiplayer.csx'
 }
 
+$scriptArguments = @('--scripts', $patchScript)
+if ($NativeGuestSelection) {
+    $scriptArguments += @('--scripts', (Join-Path $projectRoot 'tests\NativeGuestSelection.csx'))
+}
+
 $buildDirectory = Join-Path $projectRoot 'build'
 $destination = Join-Path $buildDirectory 'data.win'
 if ($inputFile.FullName -eq $destination) {
@@ -48,7 +57,7 @@ if ($inputFile.FullName -eq $destination) {
 [IO.Directory]::CreateDirectory($buildDirectory) | Out-Null
 $stagingFile = Join-Path $buildDirectory ('.void-war-build-' + [Guid]::NewGuid().ToString('N') + '.tmp')
 try {
-    & $compiler.FullName load $inputFile.FullName --scripts $patchScript --output $stagingFile
+    & $compiler.FullName load $inputFile.FullName @scriptArguments --output $stagingFile
     if ($LASTEXITCODE -ne 0 -or ![IO.File]::Exists($stagingFile)) {
         throw "UndertaleModCli failed to build data.win (exit code $LASTEXITCODE)."
     }

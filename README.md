@@ -80,6 +80,23 @@ The native starter view uses the bundled hull, border, and room sprites for **Tr
 
 If you try another ship, **F4** should report that the native view is unavailable and leave the layout view usable. Report whether the native view opened, how the crew and rooms lined up, and any wrong tile or fallback.
 
+## Native guest selection playtest
+
+On both PCs, build the opt-in co-op variant from the same source revision and compare the printed hashes. Close Void War before launching.
+
+```powershell
+.\scripts\New-Build.ps1 -NativeGuestSelection
+.\scripts\Start-VoidWar.ps1 -LogOutput
+```
+
+1. Connect using the [shared crew playtest](#shared-crew-playtest). Have the host share one crew member on **Triumph of Heaven** with **F6**, then press **F5** on the guest to open the ship view.
+2. Click the crew on the guest. The selection ring should appear on release. Right-click two different vacant tiles in the same room and verify the host crew reserves the exact tile each time. Click empty space and confirm a right-click sends no order.
+3. Drag a box from empty space around the crew, releasing in empty space on the other side. The outline should follow the pointer and the crew should be selected on release. **Shift**-click empty space to keep the selection, **Ctrl**-click the crew to remove it, then **Shift**-click the crew to add it again.
+4. Press **F4** to switch to the native starter view. Resize the window and repeat click, drag, and exact tile targeting. Check that a drag interrupted by a layout change or a loss of focus clears and that a fresh drag works.
+5. While the guest has the crew selected, have the host select a different crew member and press **F6**. The guest should lose the old selection and need to select again before right-clicking a tile. Leave and re-enter via **F5** and confirm that selection starts cleared. Press **F10** from the guest view and verify that the host can still order crew normally.
+
+Report any failed step and the window mode used. If selection never activates, check `build\void-war-playtest.log` for `[Native guest selection] enabled in guest room`. Run the default build to return to the standard co-op variant.
+
 ## Native crew input experiment
 
 This is a one-PC diagnostic. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
