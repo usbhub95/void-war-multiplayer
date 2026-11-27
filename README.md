@@ -6,14 +6,17 @@ For project status, architecture, and verification history, see the [development
 
 ## Build
 
-Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). Find the game folder in Steam under **Void War → Manage → Browse local files**. Extract the CLI and run this from the repository in PowerShell with your two paths.
+Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). Extract the CLI and run these commands from the repository in PowerShell.
 
 ```powershell
-.\scripts\New-Build.ps1 -GameDirectory 'D:\SteamLibrary\steamapps\common\Void War' `
-    -UndertaleModCli 'C:\Tools\UTMT\UndertaleModCli.exe'
+.\scripts\Setup-Assets.ps1
+$compiler = Read-Host 'Path to UndertaleModCli.exe'
+.\scripts\New-Build.ps1 -UndertaleModCli $compiler
 ```
 
-The script verifies the installed vanilla `data.win` by SHA-256 and writes the co-op build to `build\data.win`. A successful rebuild replaces the generated file. On both PCs, use the same source revision and CLI version and compare the printed output hashes.
+Run setup once per checkout. It verifies the installed vanilla `data.win` and copies it to the Git-ignored `assets\data.win`. Future builds read that copy and write `build\data.win`. Both PCs should use the same source revision and CLI version and compare the printed build hashes.
+
+Setup discovers Void War from Steam. Use `-GameDirectory` to point setup at the installed game folder manually, or `-SteamDirectory` to specify the Steam client folder. If the installed data has been replaced, use Steam's **Verify integrity of game files** before the first setup and check for the pinned vanilla SHA-256 `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. If you already have the pinned vanilla file, place it at `assets\data.win` and run setup to verify it. To build directly from a vanilla installation, pass `-GameDirectory` to the build script.
 
 ### Clean generated files
 
@@ -28,16 +31,13 @@ The first command previews the cleanup. The regular build replaces `build\data.w
 
 ## Install and restore
 
-Close Void War. From the repository, copy the generated file beside the installed `data.win` as `void-war-playtest.win` so it can load the bundled fonts. Adjust the Steam and game paths for your installation.
+Close Void War and run the [playtest launcher](scripts/Start-VoidWar.ps1) from the repository.
 
 ```powershell
-$game = 'D:\SteamLibrary\steamapps\common\Void War'
-$playtest = Join-Path $game 'void-war-playtest.win'
-Copy-Item -LiteralPath '.\build\data.win' -Destination $playtest
-& 'C:\Program Files (x86)\Steam\steam.exe' -applaunch 2853590 -game "$playtest"
+.\scripts\Start-VoidWar.ps1
 ```
 
-Steam's normal **Play** button loads the installed `data.win`. The vanilla SHA-256 for build `26906873` is `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. If the installed data was replaced, use Steam's **Verify integrity of game files** and check the hash before building.
+The launcher finds Steam and Void War, stages `build\data.win` beside the game as `void-war-playtest.win` so the runner can load the bundled fonts, and starts it through Steam. Steam's normal **Play** button uses the installed `data.win`. Use `-GameFile` for a different `.win`, `-GameDirectory` or `-SteamDirectory` for custom installations, and `-WhatIf` to preview the launch.
 
 ## Remote playtest
 
@@ -85,14 +85,11 @@ If you try another ship, **F4** should report that the native view is unavailabl
 
 This is a one-PC diagnostic. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
 
-Run the [build command](#build) with `-NativeInput` to generate the diagnostic in `build\data.win`. Close the game and run this from the repository to copy the sidecar and capture a log. Run the default build and copy the output again when returning to co-op. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
+Run the [build command](#build) with `-NativeInput` to generate the diagnostic in `build\data.win`, then launch with runner logging enabled. Run the default build again when returning to co-op. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
 
 ```powershell
-$game = 'D:\SteamLibrary\steamapps\common\Void War'
-$playtest = Join-Path $game 'void-war-playtest.win'
-$log = Join-Path $env:TEMP 'void-war-native-input.log'
-Copy-Item -LiteralPath '.\build\data.win' -Destination $playtest
-& 'C:\Program Files (x86)\Steam\steam.exe' -applaunch 2853590 -game "$playtest" -output "$log"
+.\scripts\Start-VoidWar.ps1 -LogOutput
+$log = '.\build\void-war-playtest.log'
 ```
 
 Check the game log for `[Native crew input] ready` after launch. Each accepted click should produce one order line with the selected crew member and destination room. The crew should move as in normal play.

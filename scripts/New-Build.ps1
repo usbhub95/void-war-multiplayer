@@ -1,6 +1,5 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
     [string]$GameDirectory,
 
     [Parameter(Mandatory)]
@@ -10,24 +9,23 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$game = Get-Item -LiteralPath $GameDirectory
-if (!$game.PSIsContainer -or !(Test-Path -LiteralPath (Join-Path $game.FullName 'Void War.exe') -PathType Leaf)) {
-    throw 'Point -GameDirectory at the installed Void War game folder.'
-}
-
-$inputFile = Get-Item -LiteralPath (Join-Path $game.FullName 'data.win')
-$compiler = Get-Item -LiteralPath $UndertaleModCli
-if ($inputFile.PSIsContainer -or $compiler.PSIsContainer) {
-    throw 'The installed data.win and -UndertaleModCli must be files.'
-}
-
-$expectedHash = 'ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B'
-$actualHash = (Get-FileHash -LiteralPath $inputFile.FullName -Algorithm SHA256).Hash
-if ($actualHash -ne $expectedHash) {
-    throw "The installed data.win must match vanilla Windows Steam build 26906873. Expected SHA-256 $expectedHash. Found $actualHash."
-}
+. (Join-Path $PSScriptRoot 'VoidWarPaths.ps1')
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
+$inputPath = if ($GameDirectory) {
+    Join-Path (Get-VoidWarDirectory -GameDirectory $GameDirectory) 'data.win'
+} else {
+    Join-Path $projectRoot 'assets\data.win'
+}
+if (!(Test-Path -LiteralPath $inputPath -PathType Leaf)) {
+    throw 'Run scripts/Setup-Assets.ps1 to prepare assets/data.win.'
+}
+$inputFile = Get-VerifiedVanillaData $inputPath
+$compiler = Get-Item -LiteralPath $UndertaleModCli
+if ($compiler.PSIsContainer) {
+    throw '-UndertaleModCli must point to the executable.'
+}
+
 $patchScript = if ($NativeInput) {
     Join-Path $projectRoot 'tests\NativeCrewInput.csx'
 } else {
