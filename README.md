@@ -15,6 +15,17 @@ Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows
 
 The script verifies the installed vanilla `data.win` by SHA-256 and writes the co-op build to `build\data.win`. A successful rebuild replaces the generated file. On both PCs, use the same source revision and CLI version and compare the printed output hashes.
 
+### Clean generated files
+
+Use [Clear-Build.ps1](Clear-Build.ps1) when you want to clear `build/`, including any logs saved there.
+
+```powershell
+.\Clear-Build.ps1 -WhatIf
+.\Clear-Build.ps1
+```
+
+The first command previews the cleanup. The regular build replaces `build\data.win` after compilation succeeds, so routine builds can run with the previous output in place.
+
 ## Install and restore
 
 Close Void War. Copy the generated file beside the installed `data.win` as `void-war-playtest.win` and launch it through Steam. Adjust the Steam and game paths for your installation.
