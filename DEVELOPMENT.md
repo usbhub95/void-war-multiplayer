@@ -8,7 +8,7 @@ The current target is the full Windows Steam game, build `26906873`, with a copy
 
 ## Current checkpoint
 
-Verify the host-order fix with a live [occupied-tile guest order](README.md#guest-ship-playtest) while the host's mouse is idle. Use the [current build and launch steps](README.md#build). The Empire cruiser presentation passed its two-PC playtest. See the [proposed native guest selection experiment](#proposed-native-guest-selection-experiment) for the next feasibility test.
+The occupied-tile guest order fix passed its two-PC playtest. The next feasibility test is the [proposed native guest selection experiment](#proposed-native-guest-selection-experiment).
 
 ## Architecture and game integration
 
@@ -68,7 +68,7 @@ The user confirmed that the two-PC [Empire cruiser guest view playtest](README.m
 
 The pinned game's occupied-tile helper reads the local mouse, precision setting, and selection. Its ordinary room-move wrapper can call the same helper. Guest room orders now call the underlying native room-slot chooser. For an occupied tile, the host looks up the occupant at the requested slot, checks the game's displacement conditions, and reserves the slot with the native helpers. It restores both reservations if the displaced crew member cannot be reassigned. The host acknowledges a tile order by checking that the crew has reserved that exact tile.
 
-Two builds from pinned vanilla matched SHA-256 `5704E490CF5530F29188BB9146C6416B545AE47B8A9CB1C01EF201DACC119415` for the co-op build at `0ea809d`. The consolidated build script later reproduced that hash in `build/data.win`. UndertaleModTool verified direct compiled calls to the native helpers and identical disassembly for the native room Step and movement scripts. The actual host-order GML passed a local harness with simulated movement helpers for ordinary, vacant, occupied, blocked, stale, duplicate, and rollback cases.
+Two builds from pinned vanilla matched SHA-256 `5704E490CF5530F29188BB9146C6416B545AE47B8A9CB1C01EF201DACC119415` for the co-op build at `0ea809d`. The consolidated build script later reproduced that hash in `build/data.win`. UndertaleModTool verified direct compiled calls to the native helpers and identical disassembly for the native room Step and movement scripts. The actual host-order GML passed a local harness with simulated movement helpers for ordinary, vacant, occupied, blocked, stale, duplicate, and rollback cases. The user confirmed in a live [occupied-tile playtest](README.md#guest-ship-playtest) that a guest order moved the shared crew into the occupied tile and the allied occupant moved aside as in vanilla.
 
 ### Proposed native guest selection experiment
 
