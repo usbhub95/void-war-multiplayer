@@ -8,7 +8,7 @@ The current target is the full Windows Steam game, build `26906873`, with a copy
 
 ## Current checkpoint
 
-The occupied-tile guest order fix passed its two-PC playtest. The next feasibility test is the [proposed native guest selection experiment](#proposed-native-guest-selection-experiment).
+The occupied-tile guest order fix passed its two-PC playtest. The [native guest selection feasibility test](#native-guest-selection-feasibility) passed its synthetic runner checks. The next step is an opt-in two-PC test with real guest mouse input.
 
 ## Architecture and game integration
 
@@ -74,9 +74,25 @@ The pinned game's occupied-tile helper reads the local mouse, precision setting,
 
 Two builds from pinned vanilla matched SHA-256 `5704E490CF5530F29188BB9146C6416B545AE47B8A9CB1C01EF201DACC119415` for the co-op build at `0ea809d`. The consolidated build script later reproduced that hash in `build/data.win`. UndertaleModTool verified direct compiled calls to the native helpers and identical disassembly for the native room Step and movement scripts. The actual host-order GML passed a local harness with simulated movement helpers for ordinary, vacant, occupied, blocked, stale, duplicate, and rollback cases. The user confirmed in a live [occupied-tile playtest](../README.md#guest-ship-playtest) that a guest order moved the shared crew into the occupied tile and the allied occupant moved aside as in vanilla.
 
-### Proposed native guest selection experiment
+### Native guest selection feasibility
 
-In normal single-player, `oUICursor` Draw GUI End calls `scrCursorCrewSelection`. It reads mouse release and drag coordinates, uses the `oCrew` selection collision instances, and writes the cursor's selection list. The next feasibility test is to run that routine for one mirrored crew member in the isolated guest room. Check whether lightweight local objects can supply the cursor list and crew collision shape, with the combat events isolated. Compare click, drag selection, and clearing selection against the native game. Verify that the existing guest tile-order handler consumes the result. The native right-click branch depends on additional live room and crew state.
+In single-player's normal cursor mode, `oUICursor` Draw Begin calls `scrCursorCrewSelection`. The routine resolves clicks on release against the crew's collision instance and compares the crew's origin with the drag bounds. An unmodified gesture replaces the selection. Shift adds to it and Ctrl removes matching crew. `oCrewCollision` scales a one-pixel sprite to a 30 × 30 hitbox centered on the crew. The surrounding cursor event also checks for modal UI and a live friendly hull.
+
+A temporary test using children of `oCrew` and `oUICursor` overrode their inherited events. It crashed in the Steam runner during `oGameData` startup. The vanilla crew catalog instantiates every descendant of `oCrew` and expects fields such as `baseName`. Use guest-only objects outside the vanilla crew hierarchy to avoid putting the mirrored crew in that catalog. [GameMaker parent object behavior](https://manual.gamemaker.io/lts/en/The_Asset_Editors/Objects/Parent_Objects.htm)
+
+The [isolated selection fixture](../tests/NativeGuestSelectionFixture.csx) decompiles the selection and clearing routines from locally built game data, then compiles guest copies whose crew, cursor, and portrait lookups are confined to fixture objects. The first isolated run reached the guest room and failed on a list index in the harness. Replacing the shorthand with `ds_list_find_value` resolved it. In Steam, synthetic release coordinates verified hitbox selection, empty-click clearing, drag selection, and queueing the exact tile through the existing guest handler only while selected. The fixture passed without a peer connection. Its checked-in source reproduced the tested binary at SHA-256 `D8E6C745F47DD48E49503F99C20ABA5DF363CAFE92FD77E1F418BA6AF2C10F6B`. The standard co-op output and installed vanilla data still match their previous hashes.
+
+To reproduce the fixture, first build the [standard co-op output](../README.md#build). From the repository root, compile the fixture into `temp/` and launch it with runner logging.
+
+```powershell
+New-Item -ItemType Directory -Path .\temp -Force | Out-Null
+.\assets\undertalemodcli\0.9.2.0\UndertaleModCli.exe load .\build\data.win --scripts .\tests\NativeGuestSelectionFixture.csx --output .\temp\selection-fixture.win
+.\scripts\Start-VoidWar.ps1 -GameFile .\temp\selection-fixture.win -LogOutput
+```
+
+Leave mouse buttons and modifiers released during startup. The fixture runs and exits automatically. Look for `[Native guest selection fixture] PASS click, clear, drag, gated tile order` and check for any `FAIL` markers from the same run. The original scratch prototypes, decompiled extracts, fixture binaries, and runner logs were preserved locally in Git-ignored `temp/native-selection-inspection/`.
+
+The proposed live experiment will run the isolated routines against the existing guest view and route selection into the current tile-order handler. Keep the current build as the default. Before integration, agree on an opt-in two-PC playtest covering click, drag, Shift and Ctrl selection, clearing, layout and window changes, and selection reset on a new share or disconnect. The native right-click branch still depends on additional live room and crew state.
 
 ## Long-term direction
 
