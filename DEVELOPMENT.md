@@ -47,7 +47,7 @@ Inspection of the pinned build found that the native right-click branch in `oCel
 
 The optional [diagnostic patch](experiments/NativeCrewInput.csx) redirects the four right-click movement calls to observers. Each observer logs the single-crew intent and forwards the original arguments. UndertaleModTool reopened the build and confirmed that the rest of the room Step event disassembled identically, including a later simulation-driven movement call. Two builds from the pinned protocol 5 probe matched SHA-256 `BD486434187FD7F5D16D2978D507D08B127F04FD793AD953B3680EFB19295958`. The Steam runner emitted the diagnostic startup marker from the sidecar. The installed game data hash matched before and after the smoke test.
 
-The [native crew input experiment](README.md#native-crew-input-experiment) awaits a one-PC encounter playtest. Confirm that each accepted click logs one intent, ignored clicks and simulation-driven movement log none, and crew movement behaves normally. Use the result to choose where a future guest view can turn native orders into the existing host commands.
+The one-PC [native crew input playtest](README.md#native-crew-input-experiment) on 27 November 2026 recorded five orders for the same crew member in this sequence. Room move, vacant precision slot 3, occupied precision slot 2, vacant precision slot 3, and same-room console slot 2. The user reported ending with about four no-selection clicks. No order followed the console entry before normal shutdown, consistent with those clicks being ignored. The log records orders before forwarding them to native movement. Crew arrival requires visual confirmation. The trace establishes a place to capture these four native movement intents for a future guest view.
 
 ## Long-term direction
 
