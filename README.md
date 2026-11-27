@@ -6,19 +6,25 @@ For project status, architecture, and verification history, see the [development
 
 ## Build
 
-Use the full Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). In Steam, select **Void War → Manage → Browse local files** to find your original `data.win`. Extract the CLI zip, then run this from the repository in PowerShell with your two paths.
+Use an unmodified `data.win` from Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). In Steam, select **Void War → Manage → Browse local files** to find the game folder. If it already contains a modded `data.win`, point `-GameData` at your vanilla backup. Extract the CLI zip, then run this from the repository in PowerShell with your two paths.
 
 ```powershell
 .\New-ProbeData.ps1 -GameData 'D:\SteamLibrary\steamapps\common\Void War\data.win' `
-    -UndertaleModCli 'C:\Tools\UTMT\UndertaleModCli.exe'
+    -UndertaleModCli 'C:\Tools\UTMT\UndertaleModCli.exe' -Target NativeGuestScene
 ```
 
-The script checks the original SHA-256 and writes `build\data.win`. Use the same source revision and CLI version on both PCs and compare the printed output hashes. To build again, choose a fresh filename with `-Output`.
+| Target | Default output | Contents |
+| --- | --- | --- |
+| `Coop` (default) | `build\data.win` | Co-op, including the Empire cruiser guest view |
+| `NativeGuestScene` | `build\native-guest-scene.win` | Same co-op build with the playtest filename |
+| `NativeInput` | `build\native-input.win` | One-PC native crew order diagnostic |
+
+The script checks the vanilla input's SHA-256. On both PCs, use the same source revision and CLI version and compare the printed co-op output hashes. If the chosen file already exists, use `-Output` with a fresh path.
 
 ## Install and restore
 
 1. Close Void War. Back up the original `data.win` outside the Steam install folder.
-2. Copy your locally built `build\data.win` over `data.win` in the Void War folder, then launch from Steam.
+2. Copy your locally built co-op output over `data.win` in the Void War folder, then launch from Steam.
 3. To uninstall, exit the game and copy the original `data.win` back. Check that its SHA-256 is `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. If Steam has updated the game since the test, use Steam's **Verify integrity of game files** to restore the current build.
 
 ## Remote playtest
@@ -55,7 +61,7 @@ If the ship view fails at a step, record the starter ship, which room was clicke
 
 ## Empire cruiser guest view playtest
 
-Build from the pinned vanilla data using the [build steps](#build). Use the same build on both PCs. This view uses native hull, border, and room sprites for the starter ship **Triumph of Heaven**.
+Use `-Target NativeGuestScene` in the [build command](#build) and follow the [install steps](#install-and-restore) on both PCs. This view uses native hull, border, and room sprites for the starter ship **Triumph of Heaven**.
 
 1. Follow the first two steps of the [shared crew playtest](#shared-crew-playtest) on **Triumph of Heaven**. Confirm the host can select and move crew normally before sharing with **F6**.
 2. On the guest, press **F5** to enter the layout view and **F4** to switch to the native starter view. Check that the hull, border, and rooms line up with the host and that the crew appears at the host's tile.
@@ -69,12 +75,7 @@ If you try another ship, **F4** should report that the native view is unavailabl
 
 This one-PC test uses an optional diagnostic build. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
 
-To build the diagnostic from the vanilla file for build `26906873` or the pinned protocol 5 probe, run UndertaleModTool CLI 0.9.2.0 from the repository. The example uses the protocol 5 probe as input.
-
-```powershell
-& 'C:\Tools\UTMT\UndertaleModCli.exe' load .\build\data.win `
-    --scripts .\experiments\NativeCrewInput.csx --output .\build\native-input.win
-```
+Use `-Target NativeInput` in the [build command](#build) with your vanilla `data.win`. The default output is `build\native-input.win`.
 
 With the game closed, copy `build\native-input.win` beside the installed `data.win` as `void-war-native-input.win`, then launch it through Steam. Adjust the paths for your installation. The sidecar needs to be in the game directory so the runner can load its bundled fonts. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
 

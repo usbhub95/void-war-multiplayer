@@ -6,7 +6,10 @@ param(
     [Parameter(Mandatory)]
     [string]$UndertaleModCli,
 
-    [string]$Output = (Join-Path $PSScriptRoot 'build\data.win')
+    [string]$Output,
+
+    [ValidateSet('Coop', 'NativeGuestScene', 'NativeInput')]
+    [string]$Target = 'Coop'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -22,6 +25,21 @@ if ($actualHash -ne $expectedHash) {
     throw "Expected unmodified Windows Steam build 26906873 (SHA-256 $expectedHash). Found $actualHash."
 }
 
+$outputNames = @{
+    Coop = 'data.win'
+    NativeGuestScene = 'native-guest-scene.win'
+    NativeInput = 'native-input.win'
+}
+if (!$PSBoundParameters.ContainsKey('Output')) {
+    $Output = Join-Path (Join-Path $PSScriptRoot 'build') $outputNames[$Target]
+}
+
+$patchScript = if ($Target -eq 'NativeInput') {
+    Join-Path $PSScriptRoot 'experiments\NativeCrewInput.csx'
+} else {
+    Join-Path $PSScriptRoot 'probe\ApplyProbe.csx'
+}
+
 $destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Output)
 if (Test-Path -LiteralPath $destination) {
     throw "Output already exists: $destination. Choose a new output path."
@@ -31,7 +49,6 @@ $parent = [IO.Path]::GetDirectoryName($destination)
 [IO.Directory]::CreateDirectory($parent) | Out-Null
 $stagingFile = Join-Path $parent ('.void-war-probe-' + [Guid]::NewGuid().ToString('N') + '.tmp')
 try {
-    $patchScript = Join-Path $PSScriptRoot 'probe\ApplyProbe.csx'
     & $compiler.FullName load $inputFile.FullName --scripts $patchScript --output $stagingFile
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $stagingFile -PathType Leaf)) {
         throw "UndertaleModCli failed to generate the patch (exit code $LASTEXITCODE)."
