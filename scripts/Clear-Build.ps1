@@ -2,7 +2,8 @@
 param()
 
 $ErrorActionPreference = 'Stop'
-$buildPath = Join-Path $PSScriptRoot 'build'
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$buildPath = Join-Path $projectRoot 'build'
 if (!(Test-Path -LiteralPath $buildPath)) {
     return
 }

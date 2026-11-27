@@ -2,14 +2,14 @@
 
 Two Windows Steam players can control one shared crew member aboard the host's ship. Both players connect from the title screen, and the host runs the encounter.
 
-For project status, architecture, and verification history, see the [development handoff](DEVELOPMENT.md).
+For project status, architecture, and verification history, see the [development handoff](docs/DEVELOPMENT.md).
 
 ## Build
 
 Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). Find the game folder in Steam under **Void War → Manage → Browse local files**. Extract the CLI and run this from the repository in PowerShell with your two paths.
 
 ```powershell
-.\New-Build.ps1 -GameDirectory 'D:\SteamLibrary\steamapps\common\Void War' `
+.\scripts\New-Build.ps1 -GameDirectory 'D:\SteamLibrary\steamapps\common\Void War' `
     -UndertaleModCli 'C:\Tools\UTMT\UndertaleModCli.exe'
 ```
 
@@ -17,11 +17,11 @@ The script verifies the installed vanilla `data.win` by SHA-256 and writes the c
 
 ### Clean generated files
 
-Use [Clear-Build.ps1](Clear-Build.ps1) when you want to clear `build/`, including any logs saved there.
+Use [Clear-Build.ps1](scripts/Clear-Build.ps1) when you want to clear `build/`, including any logs saved there.
 
 ```powershell
-.\Clear-Build.ps1 -WhatIf
-.\Clear-Build.ps1
+.\scripts\Clear-Build.ps1 -WhatIf
+.\scripts\Clear-Build.ps1
 ```
 
 The first command previews the cleanup. The regular build replaces `build\data.win` after compilation succeeds, so routine builds can run with the previous output in place.

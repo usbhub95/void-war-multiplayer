@@ -27,14 +27,14 @@ if ($actualHash -ne $expectedHash) {
     throw "The installed data.win must match vanilla Windows Steam build 26906873. Expected SHA-256 $expectedHash. Found $actualHash."
 }
 
-$source = Join-Path $PSScriptRoot 'src'
+$projectRoot = Split-Path -Parent $PSScriptRoot
 $patchScript = if ($NativeInput) {
-    Join-Path $source 'NativeCrewInput.csx'
+    Join-Path $projectRoot 'tests\NativeCrewInput.csx'
 } else {
-    Join-Path $source 'VoidWarMultiplayer.csx'
+    Join-Path $projectRoot 'src\VoidWarMultiplayer.csx'
 }
 
-$buildDirectory = Join-Path $PSScriptRoot 'build'
+$buildDirectory = Join-Path $projectRoot 'build'
 $destination = Join-Path $buildDirectory 'data.win'
 if ($inputFile.FullName -eq $destination) {
     throw 'The installed data.win and the build output must be separate files.'
