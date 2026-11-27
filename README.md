@@ -6,26 +6,33 @@ For project status, architecture, and verification history, see the [development
 
 ## Build
 
-Use an unmodified `data.win` from Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). In Steam, select **Void War → Manage → Browse local files** to find the game folder. If it already contains a modded `data.win`, point `-GameData` at your vanilla backup. Extract the CLI zip, then run this from the repository in PowerShell with your two paths.
+Use an unmodified `data.win` from Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). In Steam, select **Void War → Manage → Browse local files** to find the game folder. If it already contains a patched `data.win`, use your vanilla backup as the input. Run this from the repository in PowerShell with your two paths.
 
 ```powershell
-.\New-ProbeData.ps1 -GameData 'D:\SteamLibrary\steamapps\common\Void War\data.win' `
-    -UndertaleModCli 'C:\Tools\UTMT\UndertaleModCli.exe' -Target NativeGuestScene
+.\New-ProbeData.ps1 -GameData 'C:\Backups\Void War\data.win' `
+    -UndertaleModCli 'C:\Tools\UTMT\UndertaleModCli.exe'
 ```
 
-| Target | Default output | Contents |
-| --- | --- | --- |
-| `Coop` (default) | `build\data.win` | Co-op, including the Empire cruiser guest view |
-| `NativeGuestScene` | `build\native-guest-scene.win` | Same co-op build with the playtest filename |
-| `NativeInput` | `build\native-input.win` | One-PC native crew order diagnostic |
+Both files are built together in `build\playtest`.
 
-The script checks the vanilla input's SHA-256. On both PCs, use the same source revision and CLI version and compare the printed co-op output hashes. If the chosen file already exists, use `-Output` with a fresh path.
+| File | Use |
+| --- | --- |
+| `void-war-native-guest-scene.win` | Co-op on both PCs, including the Empire cruiser guest view |
+| `void-war-native-input.win` | One-PC native crew order diagnostic |
+
+The script checks the vanilla input's SHA-256 and prints the hash of each output. On both PCs, use the same source revision and CLI version and compare the co-op hashes. Rerunning the command reuses identical files. Use `-OutputDirectory` to place both builds in a different folder. To build just one, use `-Target NativeGuestScene` or `-Target NativeInput`, with `-Output` for a custom filename.
 
 ## Install and restore
 
-1. Close Void War. Back up the original `data.win` outside the Steam install folder.
-2. Copy your locally built co-op output over `data.win` in the Void War folder, then launch from Steam.
-3. To uninstall, exit the game and copy the original `data.win` back. Check that its SHA-256 is `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. If Steam has updated the game since the test, use Steam's **Verify integrity of game files** to restore the current build.
+Close Void War, then copy `build\playtest\void-war-native-guest-scene.win` into the game folder with its name intact. Launch through Steam with `-game` pointing to that file. Adjust the Steam and game paths for your installation.
+
+```powershell
+$game = 'D:\SteamLibrary\steamapps\common\Void War'
+$coop = Join-Path $game 'void-war-native-guest-scene.win'
+& 'C:\Program Files (x86)\Steam\steam.exe' -applaunch 2853590 -game "$coop"
+```
+
+Steam's normal **Play** button loads the installed `data.win`. Check it with `Get-FileHash -LiteralPath (Join-Path $game 'data.win') -Algorithm SHA256`. The vanilla SHA-256 for build `26906873` is `ABCE01818900906D6DCC6D45777B0EBFB08FC29DDED9E84B541FB4AD4348D92B`. To restore that build after a manual replacement, close Void War and copy your verified vanilla backup over the installed `data.win`.
 
 ## Remote playtest
 
@@ -41,7 +48,7 @@ Record the result on both PCs and the status shown if either fails. The original
 
 ## Shared crew playtest
 
-1. Install this build on both PCs. Open the panel with **F8** and use **F7** to set one player to **Host** and the other to **Guest** before entering peer IDs. Wait for both reply counters to increase.
+1. Launch the [co-op build](#install-and-restore) on both PCs. Open the panel with **F8** and use **F7** to set one player to **Host** and the other to **Guest** before entering peer IDs. Wait for both reply counters to increase.
 2. The guest stays on the title screen with the panel open. The host starts a run, enters combat, selects one living crew member on their own ship, and presses **F6**. Both panels should show the same numbered room map.
 3. On the guest PC, use **Left/Right** to choose a room and **Enter** to give the order. The host's game should move the selected crew member. Verify both panels report the same destination and arrival. If combat is paused, unpause it on the host to see movement.
 4. Redirect the same crew member with the host's normal controls, then send another guest order. If both issue an order, the last valid order processed on the host should determine the destination. Check both panels agree where the crew member arrives.
@@ -61,7 +68,7 @@ If the ship view fails at a step, record the starter ship, which room was clicke
 
 ## Empire cruiser guest view playtest
 
-Use `-Target NativeGuestScene` in the [build command](#build) and follow the [install steps](#install-and-restore) on both PCs. This view uses native hull, border, and room sprites for the starter ship **Triumph of Heaven**.
+Use `void-war-native-guest-scene.win` from the [default build](#build) and follow the [launch steps](#install-and-restore) on both PCs. This view uses native hull, border, and room sprites for the starter ship **Triumph of Heaven**.
 
 1. Follow the first two steps of the [shared crew playtest](#shared-crew-playtest) on **Triumph of Heaven**. Confirm the host can select and move crew normally before sharing with **F6**.
 2. On the guest, press **F5** to enter the layout view and **F4** to switch to the native starter view. Check that the hull, border, and rooms line up with the host and that the crew appears at the host's tile.
@@ -75,9 +82,7 @@ If you try another ship, **F4** should report that the native view is unavailabl
 
 This one-PC test uses an optional diagnostic build. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
 
-Use `-Target NativeInput` in the [build command](#build) with your vanilla `data.win`. The default output is `build\native-input.win`.
-
-With the game closed, copy `build\native-input.win` beside the installed `data.win` as `void-war-native-input.win`, then launch it through Steam. Adjust the paths for your installation. The sidecar needs to be in the game directory so the runner can load its bundled fonts. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
+With the game closed, copy `build\playtest\void-war-native-input.win` beside the installed `data.win` with its name intact, then launch it through Steam. Adjust the paths for your installation. The sidecar needs to be in the game directory so the runner can load its bundled fonts. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
 
 ```powershell
 $diagnostic = 'D:\SteamLibrary\steamapps\common\Void War\void-war-native-input.win'
