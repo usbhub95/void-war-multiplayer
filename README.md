@@ -1,12 +1,12 @@
-# Void War co-op connection probe
+# Void War co-op mod
 
-This Windows Steam mod tests whether two copies of Void War can exchange messages using the game's bundled Steam P2P extension. Both players connect from the title screen. The experimental crew test keeps that connection open while the host starts a fight.
+Two Windows Steam players can control one shared crew member aboard the host's ship. Both players connect from the title screen, and the host runs the encounter.
 
 For project status, architecture, and verification history, see the [development handoff](DEVELOPMENT.md).
 
 ## Build
 
-Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). Find the game folder in Steam under **Void War → Manage → Browse local files**. Run this from the repository in PowerShell with your two paths.
+Use Windows Steam build `26906873` and [UndertaleModTool CLI 0.9.2.0 for Windows](https://github.com/UnderminersTeam/UndertaleModTool/releases/tag/0.9.2.0). Find the game folder in Steam under **Void War → Manage → Browse local files**. Extract the CLI and run this from the repository in PowerShell with your two paths.
 
 ```powershell
 .\New-Build.ps1 -GameDirectory 'D:\SteamLibrary\steamapps\common\Void War' `
@@ -28,7 +28,7 @@ The first command previews the cleanup. The regular build replaces `build\data.w
 
 ## Install and restore
 
-Close Void War. Copy the generated file beside the installed `data.win` as `void-war-playtest.win` and launch it through Steam. Adjust the Steam and game paths for your installation.
+Close Void War. From the repository, copy the generated file beside the installed `data.win` as `void-war-playtest.win` so it can load the bundled fonts. Adjust the Steam and game paths for your installation.
 
 ```powershell
 $game = 'D:\SteamLibrary\steamapps\common\Void War'
@@ -47,23 +47,21 @@ Use two Windows PCs on separate internet connections, signed into separate Steam
 2. On both PCs, press **F9** to open the in-game field. Type the other player's ID or press **Ctrl+V** to paste it, then click **Connect** or press **Enter**. Confirm within 30 seconds of each other. To close the field, click **Cancel** or press **F9** again. Both panels should show **Connected through Steam**, an increasing reply count, and an RTT in milliseconds.
 3. Press **F10** on one PC. It should show **Disconnected locally.** The other PC should show **Peer stopped replying.** within 10 seconds of its last reply. Repeat the connection, then close Void War on one PC and check the survivor times out again.
 4. For a one-sided test, leave one panel idle and start the probe on the other PC. The active side should time out without receiving a reply. With a third consenting tester, attempt a probe against a player who selected someone else and verify that the third tester receives no replies.
-5. To check protocol mismatch, build a test copy from a scratch checkout with `probe_version` changed in `src/Create.gml`. Connect it to the standard probe. Neither side should report a successful connection. At least one panel should report **Peer has a different build or probe version.** Restore both PCs to the standard probe before retesting.
+5. To check protocol mismatch, build a test copy from a scratch checkout with `probe_version` changed in `src/Create.gml`. Connect it to the standard probe. Neither side should report a successful connection. At least one panel should report **Peer has a different build or probe version.** Launch the standard co-op build on both PCs after the mismatch check.
 
-Record the result on both PCs and the status shown if either fails. The original connection milestone passed over Steam on two PCs. Repeat these checks when validating a new protocol build. Steam's bundled P2P API is [deprecated by Valve](https://partner.steamgames.com/doc/api/ISteamNetworking).
+Repeat these checks when validating a new protocol build. Record the status shown on each PC if a check fails.
 
 ## Shared crew playtest
 
-1. Launch the [co-op build](#install-and-restore) on both PCs. Open the panel with **F8** and use **F7** to set one player to **Host** and the other to **Guest** before entering peer IDs. Wait for both reply counters to increase.
-2. The guest stays on the title screen with the panel open. The host starts a run, enters combat, selects one living crew member on their own ship, and presses **F6**. Both panels should show the same numbered room map.
-3. On the guest PC, use **Left/Right** to choose a room and **Enter** to give the order. The host's game should move the selected crew member. Verify both panels report the same destination and arrival. If combat is paused, unpause it on the host to see movement.
+1. Launch the [co-op build](#install-and-restore) on both PCs. Open the panel with **F8** and use **F7** to set the **Host** and **Guest** roles before connecting. Follow the ID entry steps in the [remote playtest](#remote-playtest) and wait for both reply counters to increase.
+2. The guest stays on the title screen with the panel open. The host starts a run, enters combat, selects one living crew member on their own ship, and presses **F6**. Both panels should show the same numbered map of up to 24 rooms.
+3. In the guest's numbered panel, use **Left/Right** to choose a room and **Enter** to give the order. The host's game should move the selected crew member. Verify both panels report the same destination and arrival. If combat is paused, unpause it on the host to see movement.
 4. Redirect the same crew member with the host's normal controls, then send another guest order. If both issue an order, the last valid order processed on the host should determine the destination. Check both panels agree where the crew member arrives.
 5. Press **F10** on the guest. Verify the host can still move the crew normally after the session ends.
 
-The guest uses the panel for this milestone. The numbered map shows up to 24 rooms from the host's ship. The host validates reachability at the time of the order. This build uses probe protocol 5, so both PCs need the same revision. The numbered map is still available for the keyboard playtest above.
-
 ## Guest ship playtest
 
-1. Use the shared crew steps to connect both PCs and share one crew member in an encounter on a starter ship.
+1. Follow the first two steps of the [shared crew playtest](#shared-crew-playtest) to connect and share one crew member in a starter encounter.
 2. On the guest, press **F5**. The guest ship view should show the host ship's room layout and the shared crew's in-game sprite. On the host, send the crew in opposite directions and then let it stop. The guest should see walking, turns, and the idle sprite, with smooth position changes between updates. Click the crew where it is drawn while moving to verify selection. Pause the host and check that the guest animation stops after the next update.
 3. Left-click empty space to clear the crew selection, then right-click a tile. This should send no order. Left-click the crew, then right-click a tile in a multi-tile room. Check that the host moves the crew member to that exact vacant tile and the guest shows the same tile and **Arrived**. Right-click a second vacant tile in the same room and check that the crew moves again.
 4. Put another allied crew member on a reachable tile and let them arrive. With the host's mouse idle and their crew selection cleared, select the shared crew on the guest and right-click that occupied tile. The shared crew should reserve the exact clicked tile, the occupant should move to a free tile, and the guest should show the clicked tile and **Order accepted**. Redirect the crew with the host's normal controls, then issue another guest order. Confirm that the last valid order processed on the host determines the destination.
@@ -73,21 +71,21 @@ If the ship view fails at a step, record the starter ship, which room was clicke
 
 ## Empire cruiser guest view playtest
 
-Use the [default build](#build) and follow the [launch steps](#install-and-restore) on both PCs. This view uses native hull, border, and room sprites for the starter ship **Triumph of Heaven**.
+The native starter view uses the bundled hull, border, and room sprites for **Triumph of Heaven**.
 
 1. Follow the first two steps of the [shared crew playtest](#shared-crew-playtest) on **Triumph of Heaven**. Confirm the host can select and move crew normally before sharing with **F6**.
 2. On the guest, press **F5** to enter the layout view and **F4** to switch to the native starter view. Check that the hull, border, and rooms line up with the host and that the crew appears at the host's tile.
-3. Select the crew on the guest and right-click vacant tiles in different room shapes. Include a second tile in the same room. Compare where the crew arrives on both PCs. Have the host redirect one order and check that the last order processed by the host wins.
+3. Run the [guest ship playtest](#guest-ship-playtest) movement checks in the native view. Include vacant tiles in different room shapes.
 4. Move the host's shared crew into another room and press **F6** again. The native starter view should still line up once the new layout arrives. Press **F4** to switch back and verify that the layout view still accepts an order.
-5. Press **F5** to return to the panel. Reopen the view, press **F4**, then press **F10**. The guest should return to the title screen and the host should retain normal crew controls.
+5. Run the [guest ship playtest](#guest-ship-playtest) exit checks. Press **F4** after reopening the ship view so **F10** is tested from the native view.
 
 If you try another ship, **F4** should report that the native view is unavailable and leave the layout view usable. Report whether the native view opened, how the crew and rooms lined up, and any wrong tile or fallback.
 
 ## Native crew input experiment
 
-This one-PC test uses an optional diagnostic build. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
+This is a one-PC diagnostic. Select one crew member at a time in a normal starter encounter. Use a run you are comfortable testing in.
 
-Run the [build command](#build) with `-NativeInput` to generate the diagnostic in `build\data.win`. Close the game and run this from the repository to copy and launch the diagnostic. The sidecar uses the game folder's bundled fonts. Run the default build and copy the output again when returning to co-op. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
+Run the [build command](#build) with `-NativeInput` to generate the diagnostic in `build\data.win`. Close the game and run this from the repository to copy the sidecar and capture a log. Run the default build and copy the output again when returning to co-op. [GameMaker command-line parameters](https://manual.gamemaker.io/lts/en/Settings/Command_Line_Parameters.htm)
 
 ```powershell
 $game = 'D:\SteamLibrary\steamapps\common\Void War'
@@ -107,4 +105,4 @@ Check the game log for `[Native crew input] ready` after launch. Each accepted c
 | With precision mode off, right-click the selected crew member's current room while its mannable console slot is vacant and the crew member is on another slot | `console` and the console slot |
 | Right-click with no selection or observe idle combat without giving orders | No order lines |
 
-Close the game and filter the log with `Select-String -LiteralPath $log -SimpleMatch '[Native crew input]'`. Report the matching order lines and whether each move behaved as expected. A normal Steam launch uses the installed `data.win`.
+Close the game and filter the log with `Select-String -LiteralPath $log -SimpleMatch '[Native crew input]'`. Report the matching order lines and whether each move behaved as expected.
